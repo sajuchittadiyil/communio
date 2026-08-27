@@ -34,13 +34,19 @@ class AppColors {
   /// Card / Surface background
   static const Color surface = Colors.white;
 
+  /// Cool-white application chrome, distinct from the warm content canvas.
+  static const Color appBarSurface = Color(0xFFF7F9FC);
+
+  /// Barely navy-tinted navigation surface.
+  static const Color navigationSurface = Color(0xFFFCFDFE);
+
   // -----------------------------------------------------------------
   // Text
   // -----------------------------------------------------------------
 
   static const Color textPrimary = Color(0xFF1D2939);
 
-  static const Color textSecondary = Color(0xFF667085);
+  static const Color textSecondary = Color(0xFF596579);
 
   static const Color textLight = Colors.white;
 
@@ -51,6 +57,9 @@ class AppColors {
   static const Color border = Color(0xFFD0D5DD);
 
   static const Color divider = Color(0xFFEAECF0);
+
+  /// Cool card outline used on authenticated operational surfaces.
+  static const Color cardBorder = Color(0xFFE3E8EF);
 
   // -----------------------------------------------------------------
   // Status Colors
@@ -63,6 +72,18 @@ class AppColors {
   static const Color error = Color(0xFFDC2626);
 
   static const Color info = Color(0xFF2563EB);
+
+  static const Color purple = Color(0xFF7C3EB5);
+
+  static const Color cyan = Color(0xFF0891B2);
+
+  /// Cool dashboard canvas for the authenticated Province Pulse experience.
+  static const Color dashboardBackground = Color(0xFFF5F7FA);
+
+  /// Warm login-inspired tones used only by the Province Pulse canvas.
+  static const Color dashboardIvory = Color(0xFFFEFCFB);
+  static const Color dashboardWarmCream = Color(0xFFFBF6F1);
+  static const Color dashboardSoftBeige = Color(0xFFF8F1E9);
 
   // -----------------------------------------------------------------
   // Additional Neutral Shades

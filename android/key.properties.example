@@ -1,0 +1,6 @@
+# Copy this file to android/key.properties after creating the upload keystore.
+# Never commit android/key.properties or the keystore itself.
+storeFile=../communio-upload.jks
+storePassword=REPLACE_MANUALLY
+keyPassword=REPLACE_MANUALLY
+keyAlias=communio-upload

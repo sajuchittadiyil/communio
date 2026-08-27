@@ -101,7 +101,10 @@ class _SplashScreenState extends State<SplashScreen>
 
                 FadeTransition(
                   opacity: _titleFade,
-                  child: Text('Communio', style: AppTypography.displaySmall),
+                  child: Text(
+                    'Communio',
+                    style: AppTypography.responsive(context).displaySmall,
+                  ),
                 ),
 
                 const SizedBox(height: AppSpacing.sm),
@@ -111,9 +114,9 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Text(
                     'Connecting Communities in Mission',
                     textAlign: TextAlign.center,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                    style: AppTypography.responsive(
+                      context,
+                    ).bodyMedium.copyWith(color: AppColors.textSecondary),
                   ),
                 ),
 
@@ -125,9 +128,9 @@ class _SplashScreenState extends State<SplashScreen>
                     children: [
                       Text(
                         'Preparing your community...',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                        style: AppTypography.responsive(
+                          context,
+                        ).bodySmall.copyWith(color: AppColors.textSecondary),
                       ),
 
                       const SizedBox(height: AppSpacing.md),

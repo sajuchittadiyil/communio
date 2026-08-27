@@ -41,7 +41,7 @@ class MobileBranding extends StatelessWidget {
               Text(
                 'COMMUNIO',
                 textAlign: TextAlign.center,
-                style: AppTypography.displayMedium.copyWith(
+                style: AppTypography.responsive(context).displayMedium.copyWith(
                   color: AppColors.primary,
                   fontSize: compact ? 44 : 48,
                   letterSpacing: AppSpacing.xs,
@@ -57,10 +57,11 @@ class MobileBranding extends StatelessWidget {
                     child: Text(
                       'Congregation Management Platform',
                       textAlign: TextAlign.center,
-                      style: AppTypography.titleMedium.copyWith(
-                        color: AppColors.secondaryDark,
-                        letterSpacing: AppSpacing.xxs,
-                      ),
+                      style: AppTypography.responsive(context).titleMedium
+                          .copyWith(
+                            color: AppColors.secondaryDark,
+                            letterSpacing: AppSpacing.xxs,
+                          ),
                     ),
                   ),
                 ),
@@ -69,7 +70,7 @@ class MobileBranding extends StatelessWidget {
               Text(
                 'Serving Congregations Through Technology',
                 textAlign: TextAlign.center,
-                style: AppTypography.bodyLarge.copyWith(
+                style: AppTypography.responsive(context).bodyLarge.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w500,
                 ),
@@ -131,18 +132,19 @@ class _MobileFeatureEmblem extends StatelessWidget {
         ),
         SizedBox(height: compact ? AppSpacing.xs : AppSpacing.sm),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+          padding: const EdgeInsets.symmetric(horizontal: 1),
           child: SizedBox(
             width: double.infinity,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                item.label,
-                maxLines: 1,
-                style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
+            child: Text(
+              item.label,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.visible,
+              style: AppTypography.responsive(context).labelSmall.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+                fontSize: compact ? 8.8 : 9.4,
+                letterSpacing: 0.0,
               ),
             ),
           ),

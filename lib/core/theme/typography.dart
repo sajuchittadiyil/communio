@@ -28,6 +28,9 @@ import 'package:flutter/material.dart';
 class AppTypography {
   AppTypography._();
 
+  static CommunioTextStyles responsive(BuildContext context) =>
+      CommunioTextStyles(mobile: MediaQuery.sizeOf(context).width < 760);
+
   // Font Families
   static const String headingFont = 'Cormorant Garamond';
   static const String bodyFont = 'Inter';
@@ -92,6 +95,14 @@ class AppTypography {
     height: 1.3,
   );
 
+  /// Compact editorial heading for operational dashboard cards.
+  static const TextStyle dashboardSectionTitle = TextStyle(
+    fontFamily: headingFont,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+  );
+
   // ==========================
   // TITLES
   // ==========================
@@ -115,6 +126,14 @@ class AppTypography {
     fontSize: 16,
     fontWeight: FontWeight.w600,
     height: 1.4,
+  );
+
+  /// Brand wordmark used in the permanent Provincial sidebar.
+  static const TextStyle sidebarWordmark = TextStyle(
+    fontFamily: bodyFont,
+    fontSize: 21,
+    fontWeight: FontWeight.w600,
+    height: 1.2,
   );
 
   // ==========================
@@ -166,4 +185,68 @@ class AppTypography {
     fontWeight: FontWeight.w500,
     height: 1.3,
   );
+}
+
+class CommunioTextStyles {
+  const CommunioTextStyles({required this.mobile});
+
+  final bool mobile;
+
+  TextStyle _mobile(TextStyle desktop, double size, {double? height}) => mobile
+      ? desktop.copyWith(fontSize: size, height: height ?? desktop.height)
+      : desktop;
+
+  TextStyle get displayTitle =>
+      _mobile(AppTypography.headlineLarge, 26, height: 1.25);
+  TextStyle get pageTitle =>
+      _mobile(AppTypography.headlineSmall, 25, height: 1.25);
+  TextStyle get sectionTitle =>
+      _mobile(AppTypography.titleMedium, 21, height: 1.3);
+  TextStyle get cardTitle =>
+      _mobile(AppTypography.titleSmall, 18, height: 1.35);
+  TextStyle get bodyPrimary =>
+      _mobile(AppTypography.bodyLarge, 17, height: 1.5);
+  TextStyle get bodySecondary =>
+      _mobile(AppTypography.bodyMedium, 15.5, height: 1.45);
+  TextStyle get fieldLabel =>
+      _mobile(AppTypography.labelSmall, 15.5, height: 1.4);
+  TextStyle get fieldValue =>
+      _mobile(AppTypography.labelMedium, 17.5, height: 1.4);
+  TextStyle get caption => _mobile(AppTypography.labelSmall, 14, height: 1.35);
+  TextStyle get buttonText =>
+      _mobile(AppTypography.labelLarge, 16, height: 1.35);
+  TextStyle get navigationLabel =>
+      _mobile(AppTypography.labelMedium, 14, height: 1.3);
+  TextStyle get badgeText => _mobile(AppTypography.labelSmall, 14, height: 1.3);
+  TextStyle get statNumber =>
+      _mobile(AppTypography.titleMedium, 22, height: 1.25);
+  TextStyle get statLabel =>
+      _mobile(AppTypography.labelSmall, 14.5, height: 1.3);
+
+  TextStyle get displayLarge =>
+      _mobile(AppTypography.displayLarge, 32, height: 1.2);
+  TextStyle get brandDisplay =>
+      _mobile(AppTypography.brandDisplay, 48, height: 1.1);
+  TextStyle get displayMedium =>
+      _mobile(AppTypography.displayMedium, 30, height: 1.2);
+  TextStyle get displaySmall =>
+      _mobile(AppTypography.displaySmall, 28, height: 1.2);
+  TextStyle get headlineLarge => displayTitle;
+  TextStyle get headlineMedium => pageTitle;
+  TextStyle get headlineSmall => pageTitle;
+  TextStyle get dashboardSectionTitle => sectionTitle;
+  TextStyle get titleLarge =>
+      _mobile(AppTypography.titleLarge, 22, height: 1.3);
+  TextStyle get titleMedium => sectionTitle;
+  TextStyle get titleSmall => cardTitle;
+  TextStyle get sidebarWordmark => AppTypography.sidebarWordmark;
+  TextStyle get bodyLarge => bodyPrimary;
+  TextStyle get bodyMedium =>
+      _mobile(AppTypography.bodyMedium, 16, height: 1.5);
+  TextStyle get bodySmall => bodySecondary;
+  TextStyle get labelLarge =>
+      _mobile(AppTypography.labelLarge, 17, height: 1.35);
+  TextStyle get labelMedium =>
+      _mobile(AppTypography.labelMedium, 16, height: 1.35);
+  TextStyle get labelSmall => caption;
 }

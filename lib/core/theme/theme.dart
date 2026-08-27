@@ -27,6 +27,96 @@ import 'typography.dart';
 class AppTheme {
   AppTheme._();
 
+  static ThemeData get mobile {
+    const typography = CommunioTextStyles(mobile: true);
+    return light.copyWith(
+      textTheme:
+          TextTheme(
+            displayLarge: typography.displayLarge,
+            displayMedium: typography.displayMedium,
+            displaySmall: typography.displaySmall,
+            headlineLarge: typography.headlineLarge.copyWith(
+              color: AppColors.primary,
+            ),
+            headlineMedium: typography.headlineMedium.copyWith(
+              color: AppColors.primary,
+            ),
+            headlineSmall: typography.headlineSmall.copyWith(
+              color: AppColors.primary,
+            ),
+            titleLarge: typography.titleLarge.copyWith(
+              color: AppColors.primary,
+            ),
+            titleMedium: typography.titleMedium.copyWith(
+              color: AppColors.primary,
+            ),
+            titleSmall: typography.titleSmall.copyWith(
+              color: AppColors.primary,
+            ),
+            bodyLarge: typography.bodyLarge,
+            bodyMedium: typography.bodyMedium,
+            bodySmall: typography.bodySmall,
+            labelLarge: typography.buttonText,
+            labelMedium: typography.navigationLabel,
+            labelSmall: typography.caption,
+          ).apply(
+            bodyColor: AppColors.textPrimary,
+            displayColor: AppColors.textPrimary,
+          ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 64,
+        backgroundColor: AppColors.surface,
+        indicatorColor: AppColors.secondary,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          return IconThemeData(
+            size: 26,
+            color: states.contains(WidgetState.selected)
+                ? AppColors.black
+                : AppColors.textPrimary,
+          );
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          return typography.navigationLabel.copyWith(
+            color: AppColors.textPrimary,
+            fontSize: 11,
+            height: 1.1,
+            letterSpacing: -.15,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w600
+                : FontWeight.w500,
+          );
+        }),
+      ),
+      listTileTheme: ListTileThemeData(
+        iconColor: AppColors.info,
+        titleTextStyle: typography.bodyLarge.copyWith(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w600,
+        ),
+        subtitleTextStyle: typography.bodySecondary.copyWith(
+          color: AppColors.textSecondary,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(textStyle: typography.buttonText),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(textStyle: typography.buttonText),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          textStyle: typography.buttonText,
+          side: const BorderSide(color: AppColors.primary),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      ),
+    );
+  }
+
   static ThemeData get light {
     return ThemeData(
       useMaterial3: true,
@@ -69,7 +159,7 @@ class AppTheme {
       ),
 
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.appBarSurface,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         centerTitle: false,

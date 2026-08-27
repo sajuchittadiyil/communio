@@ -87,7 +87,10 @@ class _AuthActionButtonState extends State<AuthActionButton> {
                         color: widget._isGoogle ? AppColors.primary : null,
                       ),
                       const SizedBox(width: AppSpacing.md),
-                      Text(widget.label, style: AppTypography.labelLarge),
+                      Text(
+                        widget.label,
+                        style: AppTypography.responsive(context).labelLarge,
+                      ),
                     ],
                   ),
           ),

@@ -5,6 +5,9 @@ import '../../../core/theme/radius.dart';
 import '../../../core/theme/shadows.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/theme/typography.dart';
+import '../models/auth_validators.dart';
+import '../screens/forgot_password_screen.dart';
+import '../state/authentication_scope.dart';
 import 'auth_action_button.dart';
 import 'auth_text_field.dart';
 import 'login_options.dart';
@@ -24,7 +27,6 @@ class _LoginCardState extends State<LoginCard> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = true;
-  bool _isLoading = false;
 
   bool get _canSubmit =>
       _emailController.text.trim().isNotEmpty &&
@@ -52,11 +54,28 @@ class _LoginCardState extends State<LoginCard> {
 
   Future<void> _continueSignIn() async {
     if (!_canSubmit || !_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 280));
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
+    FocusManager.instance.primaryFocus?.unfocus();
+    final controller = AuthenticationScope.of(context);
+    final signedIn = await controller.signIn(
+      email: _emailController.text,
+      password: _passwordController.text,
+      rememberMe: _rememberMe,
+    );
+    if (!mounted || signedIn) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          controller.errorMessage ??
+              'We could not sign you in. Please try again.',
+        ),
+      ),
+    );
+  }
+
+  void _openForgotPassword() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const ForgotPasswordScreen()),
+    );
   }
 
   void _showUnavailableMessage(String provider) {
@@ -67,6 +86,8 @@ class _LoginCardState extends State<LoginCard> {
 
   @override
   Widget build(BuildContext context) {
+    final authentication = AuthenticationScope.of(context);
+    final isLoading = authentication.isLoading;
     final isMobile = MediaQuery.sizeOf(context).width < 768;
     final isCompactMobile = isMobile && widget.compactMobile;
 
@@ -126,8 +147,8 @@ class _LoginCardState extends State<LoginCard> {
                   textAlign: TextAlign.center,
                   style:
                       (isCompactMobile
-                              ? AppTypography.headlineLarge
-                              : AppTypography.displayMedium)
+                              ? AppTypography.responsive(context).headlineLarge
+                              : AppTypography.responsive(context).displayMedium)
                           .copyWith(color: AppColors.primary),
                 ),
                 SizedBox(
@@ -136,9 +157,9 @@ class _LoginCardState extends State<LoginCard> {
                 Text(
                   'Sign in to continue to your account.',
                   textAlign: TextAlign.center,
-                  style: AppTypography.titleSmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppTypography.responsive(
+                    context,
+                  ).titleSmall.copyWith(color: AppColors.textSecondary),
                 ),
                 SizedBox(
                   height: isCompactMobile ? AppSpacing.sm : AppSpacing.xxl,
@@ -152,7 +173,7 @@ class _LoginCardState extends State<LoginCard> {
                     AutofillHints.email,
                   ],
                   prefixIcon: Icons.mail_outline_rounded,
-                  enabled: !_isLoading,
+                  enabled: !isLoading,
                   verticalContentPadding: isCompactMobile
                       ? AppSpacing.md
                       : AppSpacing.xl,
@@ -167,7 +188,7 @@ class _LoginCardState extends State<LoginCard> {
                   obscureText: _obscurePassword,
                   autofillHints: const [AutofillHints.password],
                   prefixIcon: Icons.lock_outline_rounded,
-                  enabled: !_isLoading,
+                  enabled: !isLoading,
                   verticalContentPadding: isCompactMobile
                       ? AppSpacing.md
                       : AppSpacing.xl,
@@ -176,7 +197,7 @@ class _LoginCardState extends State<LoginCard> {
                     tooltip: _obscurePassword
                         ? 'Show password'
                         : 'Hide password',
-                    onPressed: _isLoading
+                    onPressed: isLoading
                         ? null
                         : () => setState(
                             () => _obscurePassword = !_obscurePassword,
@@ -194,12 +215,11 @@ class _LoginCardState extends State<LoginCard> {
                 ),
                 LoginOptions(
                   rememberMe: _rememberMe,
-                  enabled: !_isLoading,
+                  enabled: !isLoading,
                   compact: isCompactMobile,
                   onRememberChanged: (value) =>
                       setState(() => _rememberMe = value),
-                  onForgotPassword: () =>
-                      _showUnavailableMessage('Password recovery'),
+                  onForgotPassword: _openForgotPassword,
                 ),
                 SizedBox(
                   height: isCompactMobile ? AppSpacing.xs : AppSpacing.md,
@@ -207,14 +227,14 @@ class _LoginCardState extends State<LoginCard> {
                 AuthActionButton(
                   label: 'Continue',
                   icon: Icons.arrow_forward_rounded,
-                  isLoading: _isLoading,
-                  onPressed: _canSubmit && !_isLoading ? _continueSignIn : null,
+                  isLoading: isLoading,
+                  onPressed: _canSubmit && !isLoading ? _continueSignIn : null,
                 ),
                 SizedBox(
                   height: isCompactMobile ? AppSpacing.sm : AppSpacing.xl,
                 ),
                 AuthActionButton.google(
-                  enabled: !_isLoading,
+                  enabled: !isLoading,
                   onPressed: () => _showUnavailableMessage('Google'),
                 ),
               ],
@@ -226,17 +246,10 @@ class _LoginCardState extends State<LoginCard> {
   }
 
   String? _validateEmail(String? value) {
-    final email = value?.trim() ?? '';
-    if (email.isEmpty || !email.contains('@') || !email.contains('.')) {
-      return 'Enter a valid email address.';
-    }
-    return null;
+    return AuthValidators.email(value);
   }
 
   String? _validatePassword(String? value) {
-    if ((value?.length ?? 0) < AppSpacing.sm) {
-      return 'Password must be at least 8 characters.';
-    }
-    return null;
+    return AuthValidators.signInPassword(value);
   }
 }

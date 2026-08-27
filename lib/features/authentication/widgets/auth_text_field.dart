@@ -45,12 +45,14 @@ class AuthTextField extends StatelessWidget {
       textInputAction: obscureText
           ? TextInputAction.done
           : TextInputAction.next,
-      style: AppTypography.bodyLarge.copyWith(color: AppColors.textPrimary),
+      style: AppTypography.responsive(
+        context,
+      ).bodyLarge.copyWith(color: AppColors.textPrimary),
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: AppTypography.bodyMedium.copyWith(
-          color: AppColors.textSecondary,
-        ),
+        hintStyle: AppTypography.responsive(
+          context,
+        ).bodyMedium.copyWith(color: AppColors.textSecondary),
         prefixIcon: Icon(prefixIcon, color: AppColors.textPrimary),
         suffixIcon: suffix,
         contentPadding: EdgeInsets.symmetric(
@@ -75,9 +77,9 @@ class AuthTextField extends StatelessWidget {
       children: [
         Text(
           label!,
-          style: AppTypography.labelLarge.copyWith(
-            color: AppColors.textPrimary,
-          ),
+          style: AppTypography.responsive(
+            context,
+          ).labelLarge.copyWith(color: AppColors.textPrimary),
         ),
         const SizedBox(height: AppSpacing.sm),
         field,

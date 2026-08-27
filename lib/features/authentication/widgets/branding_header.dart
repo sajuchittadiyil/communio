@@ -36,8 +36,8 @@ class BrandingHeader extends StatelessWidget {
             textAlign: textAlign,
             style:
                 (isCompact
-                        ? AppTypography.displayMedium
-                        : AppTypography.brandDisplay)
+                        ? AppTypography.responsive(context).displayMedium
+                        : AppTypography.responsive(context).brandDisplay)
                     .copyWith(
                       color: AppColors.primary,
                       letterSpacing: AppSpacing.xs,
@@ -47,9 +47,9 @@ class BrandingHeader extends StatelessWidget {
           Text(
             'Congregation Management Platform',
             textAlign: textAlign,
-            style: AppTypography.titleLarge.copyWith(
-              color: AppColors.secondary,
-            ),
+            style: AppTypography.responsive(
+              context,
+            ).titleLarge.copyWith(color: AppColors.secondary),
           ),
           const SizedBox(height: AppSpacing.md),
           Align(
@@ -70,7 +70,7 @@ class BrandingHeader extends StatelessWidget {
           Text(
             'Serving Congregations Through Technology',
             textAlign: textAlign,
-            style: AppTypography.bodyLarge.copyWith(
+            style: AppTypography.responsive(context).bodyLarge.copyWith(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w500,
             ),

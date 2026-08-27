@@ -121,7 +121,7 @@ class _MobileLoginLayout extends StatelessWidget {
         final keyboardIsOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
         final content = Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
+            horizontal: AppSpacing.sm,
             vertical: compact ? AppSpacing.sm : AppSpacing.lg,
           ),
           child: Column(
@@ -191,7 +191,7 @@ class _SignInColumn extends StatelessWidget {
         Text(
           '© 2026 Communio. All rights reserved.',
           textAlign: TextAlign.center,
-          style: AppTypography.labelSmall.copyWith(
+          style: AppTypography.responsive(context).labelSmall.copyWith(
             color: AppColors.textSecondary.withValues(alpha: 0.76),
           ),
         ),

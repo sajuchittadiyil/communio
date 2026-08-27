@@ -35,7 +35,12 @@ class LoginOptions extends StatelessWidget {
               : MaterialTapTargetSize.padded,
           visualDensity: compact ? VisualDensity.compact : null,
         ),
-        Expanded(child: Text('Remember me', style: AppTypography.bodySmall)),
+        Expanded(
+          child: Text(
+            'Remember me',
+            style: AppTypography.responsive(context).bodySmall,
+          ),
+        ),
         TextButton(
           onPressed: enabled ? onForgotPassword : null,
           style: compact
@@ -47,9 +52,9 @@ class LoginOptions extends StatelessWidget {
               : null,
           child: Text(
             'Forgot password?',
-            style: AppTypography.labelMedium.copyWith(
-              color: AppColors.secondary,
-            ),
+            style: AppTypography.responsive(
+              context,
+            ).labelMedium.copyWith(color: AppColors.secondary),
           ),
         ),
       ],
@@ -69,9 +74,9 @@ class AuthDivider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
             'OR',
-            style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: AppTypography.responsive(
+              context,
+            ).labelSmall.copyWith(color: AppColors.textSecondary),
           ),
         ),
         const Expanded(child: Divider(color: AppColors.divider)),

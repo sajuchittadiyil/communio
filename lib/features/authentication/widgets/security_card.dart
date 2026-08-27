@@ -58,8 +58,8 @@ class SecurityCard extends StatelessWidget {
                         : 'Secure & Trusted Platform',
                     style:
                         (mobileStyle
-                                ? AppTypography.titleMedium
-                                : AppTypography.titleSmall)
+                                ? AppTypography.responsive(context).titleMedium
+                                : AppTypography.responsive(context).titleSmall)
                             .copyWith(color: AppColors.primary),
                   ),
                   const SizedBox(height: AppSpacing.xs),
@@ -67,9 +67,9 @@ class SecurityCard extends StatelessWidget {
                     mobileStyle
                         ? 'We follow best practices to protect your information.'
                         : 'Your data is protected with enterprise-grade security and encryption to ensure complete confidentiality.',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                    style: AppTypography.responsive(
+                      context,
+                    ).bodySmall.copyWith(color: AppColors.textSecondary),
                   ),
                 ],
               ),

@@ -43,3 +43,22 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local Communio environment configuration
+config/dev_environment.json
+config/release_environment.json
+
+# Local editor configuration
+.vscode/
+
+# Temporary working files
+tmp/
+
+# Manual source backups
+*.backup
+*.backup2
+
+# Development snapshot files
+*.before_*
+*.compat_backup
+*.dashboard_backup

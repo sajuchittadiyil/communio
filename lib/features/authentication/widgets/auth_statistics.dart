@@ -78,13 +78,15 @@ class _Statistic extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         Text(
           value,
-          style: AppTypography.titleMedium.copyWith(color: AppColors.secondary),
+          style: AppTypography.responsive(
+            context,
+          ).titleMedium.copyWith(color: AppColors.secondary),
         ),
         Text(
           label,
-          style: AppTypography.labelSmall.copyWith(
-            color: AppColors.textPrimary,
-          ),
+          style: AppTypography.responsive(
+            context,
+          ).labelSmall.copyWith(color: AppColors.textPrimary),
         ),
       ],
     );

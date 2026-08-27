@@ -1,4 +1,4 @@
-package com.example.communio
+package com.nilacode.communio
 
 import io.flutter.embedding.android.FlutterActivity
 

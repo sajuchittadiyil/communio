@@ -51,19 +51,22 @@ class AuthBrandPanel extends StatelessWidget {
                           Text(
                             'COMMUNIO',
                             textAlign: TextAlign.center,
-                            style: AppTypography.brandDisplay.copyWith(
-                              color: AppColors.primary,
-                              letterSpacing: AppSpacing.sm,
-                            ),
+                            style: AppTypography.responsive(context)
+                                .brandDisplay
+                                .copyWith(
+                                  color: AppColors.primary,
+                                  letterSpacing: AppSpacing.sm,
+                                ),
                           ),
                           const SizedBox(height: AppSpacing.md),
                           Text(
                             'Congregation Management Platform',
                             textAlign: TextAlign.center,
-                            style: AppTypography.titleLarge.copyWith(
-                              color: AppColors.secondary,
-                              letterSpacing: AppSpacing.xs,
-                            ),
+                            style: AppTypography.responsive(context).titleLarge
+                                .copyWith(
+                                  color: AppColors.secondary,
+                                  letterSpacing: AppSpacing.xs,
+                                ),
                           ),
                         ],
                       ),
@@ -81,9 +84,9 @@ class AuthBrandPanel extends StatelessWidget {
                       child: Text(
                         'One Platform.\nEvery Congregation.\nEndless Possibilities.',
                         textAlign: TextAlign.center,
-                        style: AppTypography.headlineLarge.copyWith(
-                          color: AppColors.primary,
-                        ),
+                        style: AppTypography.responsive(
+                          context,
+                        ).headlineLarge.copyWith(color: AppColors.primary),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xxl),
@@ -92,10 +95,11 @@ class AuthBrandPanel extends StatelessWidget {
                     Text(
                       'Connected in Faith.\nUnited in Mission.',
                       textAlign: TextAlign.center,
-                      style: AppTypography.headlineSmall.copyWith(
-                        color: AppColors.secondary,
-                        fontStyle: FontStyle.italic,
-                      ),
+                      style: AppTypography.responsive(context).headlineSmall
+                          .copyWith(
+                            color: AppColors.secondary,
+                            fontStyle: FontStyle.italic,
+                          ),
                     ),
                   ],
                 ),
