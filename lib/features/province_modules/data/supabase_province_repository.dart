@@ -17,7 +17,7 @@ class SupabaseProvinceRepository
   @override
   Future<List<CommunityRecord>> fetchCommunities() async {
     try {
-      if (_provincialSafeModules) return _fetchCommunitiesSafe();
+      if (_provincialSafeModules) return await _fetchCommunitiesSafe();
       final results = await Future.wait([
         _client.rpc('get_provincial_communities_safe'),
         _client.from('v_demo_member_directory').select(),
@@ -251,7 +251,7 @@ class SupabaseProvinceRepository
   @override
   Future<List<MinistryRecord>> fetchMinistries() async {
     try {
-      if (_provincialSafeModules) return _fetchMinistriesSafe();
+      if (_provincialSafeModules) return await _fetchMinistriesSafe();
       final results = await Future.wait([
         _client.rpc('get_provincial_ministries_safe'),
         _client.from('member_ministry_assignments').select(),
@@ -381,7 +381,7 @@ class SupabaseProvinceRepository
   @override
   Future<List<FormationMember>> fetchFormation() async {
     try {
-      if (_provincialSafeModules) return _fetchFormationSafe();
+      if (_provincialSafeModules) return await _fetchFormationSafe();
       final results = await Future.wait([
         _client.from('v_demo_formation_pipeline').select(),
         _client.from('v_demo_member_directory').select(),
@@ -410,7 +410,7 @@ class SupabaseProvinceRepository
   Future<List<OfficeHolder>> fetchOfficeHolders() async {
     try {
       if (_provincialSafeModules) {
-        return _fetchLeadershipSafe(currentOnly: true);
+        return await _fetchLeadershipSafe(currentOnly: true);
       }
       final results = await Future.wait([
         _client.from('v_demo_current_office_holders').select(),
@@ -445,7 +445,10 @@ class SupabaseProvinceRepository
   Future<List<OfficeHolder>> fetchPastProvincials() async {
     try {
       if (_provincialSafeModules) {
-        return _fetchLeadershipSafe(currentOnly: false, provincialsOnly: true);
+        return await _fetchLeadershipSafe(
+          currentOnly: false,
+          provincialsOnly: true,
+        );
       }
       final results = await Future.wait([
         _client.from('member_office_appointments').select(),

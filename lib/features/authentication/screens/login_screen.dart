@@ -57,25 +57,36 @@ class _DesktopLoginLayout extends StatelessWidget {
                 colors: [AppColors.surface, AppColors.background],
               ),
             ),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const padding = EdgeInsets.fromLTRB(
                   AppSpacing.xxxl,
                   AppSpacing.xxxl,
                   AppSpacing.xxxl,
                   AppSpacing.lg,
-                ),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: AppSpacing.max * 5 + AppSpacing.huge,
+                );
+                return SingleChildScrollView(
+                  padding: padding,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight:
+                          constraints.maxHeight - padding.top - padding.bottom,
+                    ),
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: AppSpacing.max * 5 + AppSpacing.huge,
+                        ),
+                        child: Transform.translate(
+                          offset: const Offset(0, -AppSpacing.xl),
+                          child: const _SignInColumn(),
+                        ),
+                      ),
+                    ),
                   ),
-                  child: Transform.translate(
-                    offset: const Offset(0, -AppSpacing.xl),
-                    child: const _SignInColumn(),
-                  ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ),
