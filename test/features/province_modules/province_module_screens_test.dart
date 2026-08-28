@@ -77,6 +77,17 @@ void main() {
     expect(find.textContaining('Current Residents'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.scrollUntilVisible(
+      find.text('Community History'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Opened'), findsOneWidget);
+    expect(find.text('1965'), findsOneWidget);
+    expect(find.text('Closed'), findsOneWidget);
+    expect(find.text('30 Jun 2010'), findsOneWidget);
+    expect(find.text('Reopened'), findsOneWidget);
+    expect(find.text('1 Jul 2012'), findsOneWidget);
+    await tester.scrollUntilVisible(
       find.text('Ministries'),
       300,
       scrollable: find.byType(Scrollable).first,
@@ -134,6 +145,36 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Community Membership History'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('community lifecycle empty state remains responsive', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CommunityDetailScreen(
+          community: const CommunityRecord(
+            id: 'empty-lifecycle',
+            name: 'Community Without Lifecycle History',
+            residentCount: 0,
+          ),
+          onMember: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Community History'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('No lifecycle events are recorded.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -885,7 +926,7 @@ class _Repository implements ProvinceRepository {
     photoUrl: 'https://example.org/principal.jpg',
   );
   @override
-  Future<List<CommunityRecord>> fetchCommunities() async => const [
+  Future<List<CommunityRecord>> fetchCommunities() async => [
     CommunityRecord(
       id: 'community-1',
       name: 'St. Thomas Community',
@@ -895,6 +936,21 @@ class _Repository implements ProvinceRepository {
       superiorPerson: person,
       accountantPerson: accountant,
       establishedYear: 1965,
+      lifecycleEvents: [
+        CommunityLifecycleEvent(
+          typeCode: 'OPENED',
+          effectiveDate: DateTime(1965),
+          datePrecisionCode: 'YEAR',
+        ),
+        CommunityLifecycleEvent(
+          typeCode: 'CLOSED',
+          effectiveDate: DateTime(2010, 6, 30),
+        ),
+        CommunityLifecycleEvent(
+          typeCode: 'REOPENED',
+          effectiveDate: DateTime(2012, 7),
+        ),
+      ],
       phone: '0651 234 5678',
       location: 'Ranchi, Jharkhand',
       residents: [person, accountant],
@@ -925,6 +981,13 @@ class _Repository implements ProvinceRepository {
       id: 'community-3',
       name: 'St. Anne Community',
       residentCount: 2,
+      lifecycleEvents: [
+        CommunityLifecycleEvent(
+          typeCode: 'OPENED',
+          effectiveDate: DateTime(2000),
+          datePrecisionCode: 'YEAR',
+        ),
+      ],
       residents: [accountant],
       ministries: ['St. Anne Health Centre'],
       ministryRecords: [

@@ -135,6 +135,163 @@ cases("origin and current location remain distinct", [
   },
 ]);
 
+cases("AC-024 member languages", [
+  {
+    question: "what languages does Joseph Varghese speak",
+    expected: {
+      intent: "member_languages",
+      entity: "Joseph Varghese",
+      topic: "spoken",
+    },
+  },
+  {
+    question: "Which languages does Joseph Varghese know?",
+    expected: {
+      intent: "member_languages",
+      entity: "Joseph Varghese",
+      topic: "recorded",
+    },
+  },
+  {
+    question: "Languages of Joseph Varghese",
+    expected: {
+      intent: "member_languages",
+      entity: "Joseph Varghese",
+      topic: "recorded",
+    },
+  },
+]);
+
+cases("AC-088 and AC-089 community lifecycle", [
+  {
+    question: "communities opened in 2015",
+    expected: { intent: "community_lifecycle", topic: "OPENED", year: 2015 },
+  },
+  {
+    question: "Which communities established in 2015?",
+    expected: { intent: "community_lifecycle", topic: "OPENED", year: 2015 },
+  },
+  {
+    question: "communities closed in 2015",
+    expected: { intent: "community_lifecycle", topic: "CLOSED", year: 2015 },
+  },
+]);
+
+cases("AC-090 formal transfer", [
+  {
+    question: "who transferred from St Antony Community in 2015",
+    expected: {
+      intent: "formal_transfer",
+      entity: "St Antony Community",
+      topic: "from_community",
+      year: 2015,
+    },
+  },
+  {
+    question: "Who formally moved from St Antony Community in 2015?",
+    expected: {
+      intent: "formal_transfer",
+      entity: "St Antony Community",
+      year: 2015,
+    },
+  },
+  {
+    question: "when was Joseph Varghese transferred",
+    expected: {
+      intent: "formal_transfer",
+      entity: "Joseph Varghese",
+      topic: "member_history",
+    },
+  },
+  {
+    question:
+      "when was Joseph Varghese transferred from one community to another",
+    expected: {
+      intent: "formal_transfer",
+      entity: "Joseph Varghese",
+      topic: "member_history",
+    },
+  },
+  {
+    question: "show the transfer history of Joseph Varghese",
+    expected: {
+      intent: "formal_transfer",
+      entity: "Joseph Varghese",
+      topic: "member_history",
+    },
+  },
+  {
+    question: "why was Joseph Varghese transferred",
+    expected: {
+      intent: "formal_transfer",
+      entity: "Joseph Varghese",
+      topic: "member_reason",
+    },
+  },
+  {
+    question: "show the transfer history of Antony Antony",
+    expected: {
+      intent: "formal_transfer",
+      entity: "Antony Antony",
+      topic: "member_history",
+    },
+  },
+]);
+
+cases("natural Provincial analytics families", [
+  {
+    question: "How many parishes",
+    expected: {
+      intent: "ministry_directory",
+      topic: "parish",
+      outputType: "count",
+    },
+  },
+  {
+    question: "count the hospitals",
+    expected: {
+      intent: "ministry_directory",
+      topic: "hospital",
+      outputType: "count",
+    },
+  },
+  {
+    question: "How many members between 55 years old to 60 years old",
+    expected: { intent: "age_search", age: 55, ageTo: 60, outputType: "count" },
+  },
+  {
+    question: "members aged 55–60",
+    expected: { intent: "age_search", age: 55, ageTo: 60 },
+  },
+  {
+    question: "how many birthdays in the month of september",
+    expected: { intent: "birthday_month", month: 9, outputType: "count" },
+  },
+  {
+    question: "Who has a birthday in September?",
+    expected: { intent: "birthday_month", month: 9 },
+  },
+  {
+    question:
+      "How many members will have their 10th year first vows anniversary next year",
+    expected: {
+      intent: "vocation_anniversary",
+      anniversary: 10,
+      topic: "FIRST_PROFESSION",
+      outputType: "count",
+    },
+  },
+  {
+    question: "25th temporary vows anniversary in 2030",
+    expected: {
+      intent: "vocation_anniversary",
+      anniversary: 25,
+      year: 2030,
+      topic: "FIRST_PROFESSION",
+    },
+  },
+]);
+
 cases("location entities are not member origins", [
   {
     question: "Which communities are in Kerala?",
@@ -1803,6 +1960,92 @@ cases("historical governance body routing outranks generic provincial", [
   },
 ]);
 
+cases("current governance bodies use dedicated intents", [
+  {
+    question: "list governance bodies",
+    expected: { intent: "governance_directory" },
+  },
+  {
+    question: "show governance bodies",
+    expected: { intent: "governance_directory" },
+  },
+  {
+    question: "tell me about the Education Commission",
+    expected: {
+      intent: "governance_body_profile",
+      entity: "education commission",
+    },
+  },
+  {
+    question: "tell me about the Finance Committee",
+    expected: {
+      intent: "governance_body_profile",
+      entity: "finance committee",
+    },
+  },
+  {
+    question: "who belongs to education commission",
+    expected: {
+      intent: "governance_body_members",
+      entity: "education commission",
+    },
+  },
+  {
+    question: "who belongs to finance commission",
+    expected: {
+      intent: "governance_body_members",
+      entity: "finance commission",
+    },
+  },
+  {
+    question: "members of sustainability commission",
+    expected: {
+      intent: "governance_body_members",
+      entity: "sustainability commission",
+    },
+  },
+  {
+    question: "who chairs the Education Commission",
+    expected: {
+      intent: "governance_body_leader",
+      entity: "education commission",
+    },
+  },
+  {
+    question: "who chaired the education commission",
+    expected: {
+      intent: "governance_body_leader",
+      entity: "education commission",
+    },
+  },
+  {
+    question: "who is president of the Provincial Council",
+    expected: {
+      intent: "governance_body_leader",
+      entity: "provincial council",
+    },
+  },
+]);
+
+Deno.test("governance follow-up uses a singular body focus", () => {
+  const actual = interpretAskCommunioQuestion("Who chairs it?", {
+    focus_entity_type: "governance_body",
+    focus_entity_id: "body-1",
+    focus_entity_name: "Education Commission",
+  });
+  assertEquals(
+    actual.intent,
+    "governance_body_leader",
+    "governance follow-up intent",
+  );
+  assertEquals(
+    actual.entity,
+    "Education Commission",
+    "governance follow-up entity",
+  );
+  assertEquals(actual.entityId, "body-1", "governance follow-up ID");
+});
+
 cases("appointment expiry supported semantics", [
   {
     question: "Which appointments are ending soon?",
@@ -1871,6 +2114,22 @@ cases("demo terminology routes only current organization vocabulary", [
 ]);
 
 const reachabilityCases: Case[] = [
+  {
+    question: "list governance bodies",
+    expected: { intent: "governance_directory" },
+  },
+  {
+    question: "tell me about Education Commission",
+    expected: { intent: "governance_body_profile" },
+  },
+  {
+    question: "members of Finance Commission",
+    expected: { intent: "governance_body_members" },
+  },
+  {
+    question: "who chairs Sustainability Commission",
+    expected: { intent: "governance_body_leader" },
+  },
   ...decisionCases,
   ...ambiguityCases,
   {
@@ -2011,6 +2270,10 @@ const reachabilityCases: Case[] = [
     question: "What is Fr. Thomas's Religious ID?",
     expected: { intent: "member_profile" },
   },
+  {
+    question: "what languages does Joseph Varghese speak",
+    expected: { intent: "member_languages" },
+  },
   { question: "Who joined in 1985?", expected: { intent: "vocation_cohort" } },
   {
     question: "How many active members do we have?",
@@ -2024,6 +2287,14 @@ const reachabilityCases: Case[] = [
   {
     question: "history of St Antony Community",
     expected: { intent: "community_history" },
+  },
+  {
+    question: "communities opened in 2015",
+    expected: { intent: "community_lifecycle" },
+  },
+  {
+    question: "who transferred from St Antony Community in 2015",
+    expected: { intent: "formal_transfer" },
   },
   {
     question: "who joined St Antony Community in 2015",
@@ -2056,6 +2327,18 @@ const reachabilityCases: Case[] = [
   {
     question: "compare appointments of Joseph and Thomas",
     expected: { intent: "member_appointment_comparison" },
+  },
+  {
+    question: "September birthdays",
+    expected: { intent: "birthday_month" },
+  },
+  {
+    question: "10th first profession anniversary next year",
+    expected: { intent: "vocation_anniversary" },
+  },
+  {
+    question: "when was St. Antony College started",
+    expected: { intent: "ministry_establishment" },
   },
 ];
 

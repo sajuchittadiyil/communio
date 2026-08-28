@@ -91,6 +91,7 @@ class CommunityRecord {
     this.ministries = const [],
     this.ministryRecords = const [],
     this.currentMovements = const [],
+    this.lifecycleEvents = const [],
     this.history = const [],
   });
   final String id;
@@ -127,9 +128,30 @@ class CommunityRecord {
   final List<String> ministries;
   final List<MinistryRecord> ministryRecords;
   final List<CommunityMovement> currentMovements;
+  final List<CommunityLifecycleEvent> lifecycleEvents;
   final List<ProvinceAssignment> history;
   String get status =>
       recordStatus ?? (residentCount > 0 ? 'Active' : 'No current residents');
+}
+
+class CommunityLifecycleEvent {
+  const CommunityLifecycleEvent({
+    required this.typeCode,
+    required this.effectiveDate,
+    this.datePrecisionCode = 'DAY',
+  });
+
+  final String typeCode;
+  final DateTime effectiveDate;
+  final String datePrecisionCode;
+
+  String get typeLabel => switch (typeCode.toUpperCase()) {
+    'OPENED' => 'Opened',
+    'CLOSED' => 'Closed',
+    'REOPENED' => 'Reopened',
+    'STATUS_CHANGED' => 'Status changed',
+    _ => typeCode,
+  };
 }
 
 class CommunityMovement {

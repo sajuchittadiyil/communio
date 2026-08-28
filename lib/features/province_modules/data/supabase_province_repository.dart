@@ -714,9 +714,18 @@ class SupabaseProvinceRepository
   bool get _provincialSafeModules => true;
 
   Future<List<CommunityRecord>> _fetchCommunitiesSafe() async {
-    final rows = List<Map<String, dynamic>>.from(
-      await _client.rpc('get_provincial_communities_safe'),
-    );
+    final results = await Future.wait<dynamic>([
+      Future<dynamic>.value(_client.rpc('get_provincial_communities_safe')),
+      Future<dynamic>.value(
+        _client
+            .from('v_community_lifecycle')
+            .select()
+            .order('effective_date')
+            .order('event_type_code'),
+      ),
+    ]);
+    final rows = List<Map<String, dynamic>>.from(results[0]);
+    final lifecycleRows = List<Map<String, dynamic>>.from(results[1]);
     if (kDebugMode) {
       debugPrint('[ProvincialCommunitiesRPC] rows=${rows.length}');
     }
@@ -825,10 +834,25 @@ class SupabaseProvinceRepository
               ),
             )
             .toList(),
+        lifecycleEvents: lifecycleRows
+            .where(
+              (item) =>
+                  _text(item, ['community_id']) ==
+                  _text(row, ['community_id', 'id']),
+            )
+            .map(_communityLifecycleEvent)
+            .toList(),
         history: history,
       );
     }).toList();
   }
+
+  CommunityLifecycleEvent _communityLifecycleEvent(Map<String, dynamic> row) =>
+      CommunityLifecycleEvent(
+        typeCode: _text(row, ['event_type_code']) ?? 'STATUS_CHANGED',
+        effectiveDate: _date(row, ['effective_date']) ?? DateTime(1),
+        datePrecisionCode: _text(row, ['date_precision_code']) ?? 'DAY',
+      );
 
   Future<List<MinistryRecord>> _fetchMinistriesSafe() async {
     final rows = List<Map<String, dynamic>>.from(

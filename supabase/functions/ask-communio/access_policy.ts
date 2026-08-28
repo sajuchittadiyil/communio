@@ -8,6 +8,7 @@ export function memberAllowedIntent(intent: AskCommunioIntent): boolean {
     "clarification_needed",
     "member_safe_factual",
     "member_profile",
+    "member_languages",
     "member_history",
     "community_directory",
     "community_profile",

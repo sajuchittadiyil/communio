@@ -49,6 +49,18 @@ final _profile = ReligiousProfile(
       ),
       QualificationRecord(qualification: 'Class 10'),
     ],
+    languages: const [
+      MemberLanguage(
+        name: 'Malayalam',
+        proficiencyLevelCode: 'NATIVE',
+        canSpeak: true,
+        canRead: true,
+        canWrite: true,
+        isPrimary: true,
+        isNative: true,
+      ),
+      MemberLanguage(name: 'Hindi', canSpeak: true, canRead: true),
+    ],
     communityAssignments: [
       AssignmentRecord(
         kind: 'Community',
@@ -186,6 +198,37 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('renders structured language proficiency and capabilities', (
+    tester,
+  ) async {
+    await _pump(tester, const Size(1200, 1800), _ValueRepository(_profile));
+
+    expect(find.byKey(const Key('profile-languages')), findsOneWidget);
+    expect(find.text('Languages'), findsOneWidget);
+    expect(find.text('Malayalam'), findsOneWidget);
+    expect(find.text('Native · Speak · Read · Write'), findsOneWidget);
+    expect(find.text('Hindi'), findsOneWidget);
+    expect(find.text('Speak · Read'), findsOneWidget);
+    expect(find.textContaining('true'), findsNothing);
+  });
+
+  testWidgets('language section has a precise empty state', (tester) async {
+    const sparse = ReligiousProfile(
+      memberId: 'sparse-language-id',
+      displayName: 'Sparse Member',
+      memberStatus: 'Active',
+      sections: ReligiousProfileSections(),
+    );
+    await _pump(tester, const Size(390, 1200), const _ValueRepository(sparse));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('profile-languages')),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('No language information recorded'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows historical leave and all structured office contexts', (
     tester,
   ) async {
@@ -245,6 +288,43 @@ void main() {
 
     expect(find.text('1990'), findsOneWidget);
     expect(find.textContaining('1 January 1990'), findsNothing);
+  });
+
+  testWidgets('timeline labels explicit formal transfers distinctly', (
+    tester,
+  ) async {
+    final transferProfile = ReligiousProfile(
+      memberId: 'transfer-member',
+      displayName: 'Transfer Member',
+      memberStatus: 'Active',
+      sections: ReligiousProfileSections(
+        transfers: [
+          MemberTransferRecord(
+            id: 'transfer-1',
+            fromCommunityName: 'St. Antony Community',
+            toCommunityName: 'St. Anne Community',
+            effectiveDate: DateTime(2026, 8, 8),
+          ),
+        ],
+      ),
+    );
+    await _pump(
+      tester,
+      const Size(390, 1000),
+      _ValueRepository(transferProfile),
+    );
+    await tester.scrollUntilVisible(
+      find.text('St. Antony Community → St. Anne Community'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Transfer'), findsWidgets);
+    expect(
+      find.text('St. Antony Community → St. Anne Community'),
+      findsOneWidget,
+    );
+    expect(find.text('8 August 2026'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('renders a vertically scrollable mobile profile', (tester) async {

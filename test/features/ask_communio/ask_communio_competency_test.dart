@@ -74,7 +74,6 @@ void main() {
 
     const behaviors = {
       'PASS',
-      'KNOWN_GAP',
       'CLARIFY',
       'ZERO_RESULT',
       'UNSUPPORTED',
@@ -129,7 +128,6 @@ void main() {
   test('safety and semantic expectation categories remain represented', () {
     for (final behavior in [
       'PASS',
-      'KNOWN_GAP',
       'CLARIFY',
       'ZERO_RESULT',
       'UNSUPPORTED',

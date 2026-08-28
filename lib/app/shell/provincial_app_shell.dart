@@ -13,6 +13,9 @@ import '../../features/religious_directory/data/member_directory_repository.dart
 import '../../features/dashboard/data/dashboard_repository.dart';
 import '../../features/dashboard/data/supabase_dashboard_repository.dart';
 import '../../features/dashboard/models/dashboard_models.dart';
+import '../../features/governance/data/governance_repository.dart';
+import '../../features/governance/data/supabase_governance_repository.dart';
+import '../../features/governance/models/governance_models.dart';
 import '../../features/religious_directory/data/supabase_member_directory_repository.dart';
 import '../../features/religious_directory/models/member_directory_entry.dart';
 import '../../features/religious_profile/data/religious_profile_repository.dart';
@@ -48,6 +51,7 @@ class ProvincialAppShell extends StatefulWidget {
     this.religiousProfileRepository,
     this.dashboardRepository,
     this.provinceRepository,
+    this.governanceRepository,
     this.organizationIdentityRepository,
     this.askCommunioService,
     this.memberCelebrationsRepository,
@@ -60,6 +64,7 @@ class ProvincialAppShell extends StatefulWidget {
   final ReligiousProfileRepository? religiousProfileRepository;
   final DashboardRepository? dashboardRepository;
   final ProvinceRepository? provinceRepository;
+  final GovernanceRepository? governanceRepository;
   final OrganizationIdentityRepository? organizationIdentityRepository;
   final AskCommunioService? askCommunioService;
   final MemberCelebrationsRepository? memberCelebrationsRepository;
@@ -107,6 +112,11 @@ class _ProvincialAppShellState extends State<ProvincialAppShell> {
       (AppEnvironment.hasSupabaseConfiguration
           ? SupabaseProvinceRepository(Supabase.instance.client)
           : const _UnavailableProvinceRepository());
+  GovernanceRepository get _governanceRepository =>
+      widget.governanceRepository ??
+      (AppEnvironment.hasSupabaseConfiguration
+          ? SupabaseGovernanceRepository(Supabase.instance.client)
+          : const _UnavailableGovernanceRepository());
   ProvinceRepository get _authorizedProvinceRepository =>
       widget.access.isMemberLike
       ? MemberCalendarRepository(
@@ -221,6 +231,7 @@ class _ProvincialAppShellState extends State<ProvincialAppShell> {
               onProfileBack: _closeProfile,
               dashboardRepository: _dashboardRepository,
               provinceRepository: _authorizedProvinceRepository,
+              governanceRepository: _governanceRepository,
               organizationIdentityRepository: _authorizedIdentityRepository,
               formationFilter: _formationFilter,
               onFormationFilter: _openFormation,
@@ -292,6 +303,7 @@ class _ProvincialAppShellState extends State<ProvincialAppShell> {
                         onProfileBack: _closeProfile,
                         dashboardRepository: _dashboardRepository,
                         provinceRepository: _authorizedProvinceRepository,
+                        governanceRepository: _governanceRepository,
                         organizationIdentityRepository:
                             _authorizedIdentityRepository,
                         formationFilter: _formationFilter,
@@ -553,6 +565,13 @@ class _UnavailableReligiousProfileRepository
   @override
   Future<ReligiousProfile> fetchProfile(String memberId) =>
       Future.error(StateError('Supabase is not configured'));
+}
+
+class _UnavailableGovernanceRepository implements GovernanceRepository {
+  const _UnavailableGovernanceRepository();
+
+  @override
+  Future<List<GovernanceBody>> fetchBodies() async => const [];
 }
 
 class _UnavailableDashboardRepository implements DashboardRepository {

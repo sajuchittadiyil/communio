@@ -27,7 +27,7 @@ pass("members", "profile", "member_profile", [
 ], { expected_entity_type: "member", expected_entity_name: "Joseph Varghese" });
 pass("members", "profile", "member_profile", ["profile of Joseph Varghese", "what is Joseph Varghese's date of birth", "when was Joseph Varghese born", "how old is Joseph Varghese"], { expected_entity_type: "member", expected_entity_name: "Joseph Varghese", priority: "P2", notes: "Wave 1 safe profile facts" });
 pass("members", "profile", "member_profile", ["show Joseph Varghese's email", "show Joseph Varghese's phone", "show Joseph Varghese's address"], { expected_entity_type: "member", expected_entity_name: "Joseph Varghese", priority: "P2", notes: "Wave 3 caller-authorized safe profile contact facts" });
-gap("members", "profile", ["what languages does Joseph Varghese speak"], "No normalized member-language relation or proficiency model");
+add("members", "profile", "what languages does Joseph Varghese speak", "member_languages", { expected_entity_type: "member", expected_entity_name: "Joseph Varghese", priority: "P2", notes: "Recorded member-language proficiency only" });
 add("members", "profile", "show Joseph Varghese's status", "member_profile", { expected_entity_type: "member", expected_entity_name: "Joseph Varghese", priority: "P2", notes: "Wave 1 safe profile status" });
 
 pass("age_demographics", "extreme", "member_age_extreme", ["who is the oldest", "who is the oldest member", "eldest member", "who is the youngest", "youngest religious", "who was born earliest"], { expected_entity_type: "member", expected_output_type: "single", priority: "P0" });
@@ -52,10 +52,12 @@ for (const [question, year, yearTo] of [["community membership in 2010", "2010",
   add("historical_community", "movement", question, "clarification_needed", { expected_time_scope: yearTo ? `${year}..${yearTo}` : year, expected_behavior: "CLARIFY", priority: "P2", notes: "Wave 2 safely requires a named community" });
 }
 add("historical_community", "movement", "history of St Antony Community", "community_history", { expected_entity_type: "community", expected_entity_name: "St Antony Community", priority: "P2", notes: "Wave 2 effective-dated community timeline" });
-gap("historical_community", "movement", ["how many members were there in 2015"], "Missing community scope remains a conservative roadmap case");
+add("historical_community", "movement", "how many members were there in 2015", "clarification_needed", { expected_output_type: "count", expected_time_scope: "2015", expected_behavior: "CLARIFY", priority: "P2", notes: "Missing community scope is rejected with a community clarification" });
 add("historical_community", "movement", "which was the largest community in 2015", "historical_community_ranking", { expected_entity_type: "community", expected_time_scope: "2015", priority: "P2", notes: "Wave 2 effective-dated historical ranking" });
 add("historical_community", "movement", "community strength in 2010", "clarification_needed", { expected_time_scope: "2010", expected_behavior: "CLARIFY", priority: "P2", notes: "Wave 2 safely requires a named community" });
-gap("historical_community", "movement", ["communities opened in 2015", "communities closed in 2015", "who transferred from St Antony Community in 2015"], "Lifecycle/explicit transfer semantics are not reliably stored");
+add("historical_community", "movement", "communities opened in 2015", "community_lifecycle", { expected_entity_type: "community", expected_time_scope: "2015", priority: "P2", notes: "Recorded OPENED lifecycle events only" });
+add("historical_community", "movement", "communities closed in 2015", "community_lifecycle", { expected_entity_type: "community", expected_time_scope: "2015", priority: "P2", notes: "Recorded CLOSED lifecycle events only" });
+add("historical_community", "movement", "who transferred from St Antony Community in 2015", "formal_transfer", { expected_entity_type: "community", expected_entity_name: "St Antony Community", expected_time_scope: "2015", priority: "P2", notes: "Confirmed explicit formal-transfer records only; assignment transitions are never substituted" });
 
 pass("ministries", "assignment", "ministry_assignment_history", ["who works at St Antony School", "who is assigned to St Antony School", "who served at St Antony School", "which members worked at St Antony School"], { expected_entity_type: "ministry" });
 pass("ministries", "leadership", "ministry_leadership_history", ["who was principal of St Antony School in 2015", "who were the principals of St Antony School", "show principal history for St Antony School"], { expected_entity_type: "ministry" });
@@ -113,16 +115,27 @@ pass("aggregations", "communities", "present_state", ["how many communities", "h
 pass("aggregations", "age", "age_search", ["how many members over 60", "how many members under 40", "how many members between 50 and 65"], { expected_output_type: "count" });
 pass("aggregations", "ranking", "community_size_ranking", ["which community has most members", "which community has fewest members"], { expected_output_type: "single" });
 pass("aggregations", "member_category", "present_state", ["how many priests", "how many brothers"], { expected_output_type: "count", priority: "P2", notes: "Wave 1 active canonical ecclesiastical-title count" });
-gap("aggregations", "known_gap", ["how many communities have fewer than 5 members", "average age of members", "age distribution", "median age", "members by state"], "Advanced aggregation remains Wave 4");
+add("aggregations", "known_gap", "how many communities have fewer than 5 members", "community_size_threshold", { expected_output_type: "count", priority: "P2", notes: "Current active communities grouped by distinct current active members" });
+add("aggregations", "known_gap", "average age of members", "member_analytics", { priority: "P2", notes: "Current active members with recorded birth dates" });
+add("aggregations", "known_gap", "age distribution", "member_analytics", { priority: "P2", notes: "Stable current-age bands with birth-date coverage disclosed" });
+add("aggregations", "known_gap", "median age", "member_analytics", { priority: "P2", notes: "Current active members with recorded birth dates" });
+add("aggregations", "known_gap", "members by state", "member_analytics", { priority: "P2", notes: "Distinct current active members grouped by recorded native state" });
 
 pass("governance", "provincial_council", "governance_body_membership", ["who were council members in 2020", "who served on council in 2020"], { expected_time_scope: "2020" });
 pass("governance", "current", "appointment_search", ["who are current Provincial Council members", "who are the provincial councillors"], {});
-gap("governance", "bodies", ["list governance bodies", "show governance bodies", "who belongs to education commission", "who belongs to finance commission", "members of sustainability commission", "who chaired the education commission"], "Governance body schema not exposed to Ask Communio");
+pass("governance", "bodies", "governance_directory", ["list governance bodies", "show governance bodies"], { expected_entity_type: "governance_body", priority: "P2", notes: "Caller-authorized active governance body directory" });
+add("governance", "bodies", "who belongs to education commission", "governance_body_members", { expected_entity_type: "governance_body", expected_entity_name: "education commission", priority: "P2", notes: "Explicit governance body membership only" });
+add("governance", "bodies", "who belongs to finance commission", "governance_body_members", { expected_entity_type: "governance_body", expected_entity_name: "finance commission", priority: "P2", notes: "Explicit governance body membership only" });
+add("governance", "bodies", "members of sustainability commission", "governance_body_members", { expected_entity_type: "governance_body", expected_entity_name: "sustainability commission", priority: "P2", notes: "Explicit governance body membership only" });
+add("governance", "bodies", "who chaired the education commission", "governance_body_leader", { expected_entity_type: "governance_body", expected_entity_name: "education commission", priority: "P2", notes: "Explicit governance body leadership only" });
 
 pass("entity_resolution", "community", "community_membership_history", ["members of St Antony Community", "members of St. Antony Community", "members of st antony community", "members of St Antony", "members of St Antony Community Kolkata", "members of St Antony Community kolkota"], { ambiguity_expected: "true", expected_entity_type: "community" });
 pass("entity_resolution", "member", "person_search", ["show Joseph", "find Fr Joseph", "find Fr. Joseph", "find Bro Joseph", "find Bro. Joseph"], { ambiguity_expected: "true", expected_entity_type: "member" });
 pass("entity_resolution", "clarification", "community_superior_history", ["who was the superior of St Antony Community in 2015"], { expected_behavior: "CLARIFY", ambiguity_expected: "true" });
-gap("entity_resolution", "malformed", ["St Antony", "Joseph", "community", "member"], "Bare noun/name intent is intentionally conservative");
+add("entity_resolution", "malformed", "St Antony", "clarification_needed", { expected_behavior: "CLARIFY", priority: "P2", notes: "Bare multi-domain entity is clarified, never guessed" });
+add("entity_resolution", "malformed", "Joseph", "person_search", { expected_entity_type: "member", expected_entity_name: "Joseph", expected_behavior: "CLARIFY", priority: "P2", notes: "Bare person candidate uses the ambiguity-safe person resolver" });
+add("entity_resolution", "malformed", "community", "clarification_needed", { expected_behavior: "CLARIFY", priority: "P2", notes: "Bare domain noun requests a community" });
+add("entity_resolution", "malformed", "member", "clarification_needed", { expected_behavior: "CLARIFY", priority: "P2", notes: "Bare domain noun requests a member" });
 
 const conversations = [
   ["A", [
@@ -144,8 +157,10 @@ for (const [conversation, turns] of conversations) turns.forEach(([q, intent, ty
 
 pass("composed_queries", "community", "composed_community_query", ["who is the superior of the largest community", "who is superior of the biggest community", "who are the members of the largest community", "how many members are in the largest community", "who lived in the largest community in 2015"], { expected_entity_type: "community", priority: "P0" });
 add("composed_queries", "tie", "who is superior of the smallest community", "composed_community_query", { expected_behavior: "CLARIFY", ambiguity_expected: "true", priority: "P0" });
-add("composed_queries", "temporal", "which was the largest community in 2015", "clarification_needed", { expected_behavior: "KNOWN_GAP", expected_time_scope: "2015", priority: "P1" });
-gap("composed_queries", "advanced", ["where is the superior of the largest community", "how old is the superior of the largest community", "which ministry has the most members"], "Nested query not supported");
+add("composed_queries", "temporal", "which was the largest community in 2015", "historical_community_ranking", { expected_time_scope: "2015", priority: "P1", notes: "Historical assignments are deduplicated by member and effective-date overlap" });
+add("composed_queries", "advanced", "where is the superior of the largest community", "composed_community_query", { priority: "P2", notes: "Authorized community ID and superior member ID are passed between stages" });
+add("composed_queries", "advanced", "how old is the superior of the largest community", "composed_community_query", { priority: "P2", notes: "Authorized community ID and superior member ID are passed between stages" });
+add("composed_queries", "advanced", "which ministry has the most members", "ministry_size_ranking", { priority: "P2", notes: "Active ministries ranked by distinct current active members" });
 
 for (const [q, intent, behavior, note] of [
   ["who made final profession in 1901", "vocation_cohort", "ZERO_RESULT", "Recognized vocation intent"],
@@ -159,7 +174,7 @@ for (const [q, intent, behavior, note] of [
   ["how many are there", "clarification_needed", "CLARIFY", "Missing domain"],
   ["???", "unknown", "UNSUPPORTED", "Malformed"], ["random purple banana", "unknown", "UNSUPPORTED", "Malformed"],
 ]) add("negative", "safety", q, intent, { expected_behavior: behavior, zero_result_allowed: behavior === "ZERO_RESULT" ? "true" : "false", priority: "P0", notes: note });
-gap("negative", "input_validation", ["", "?", "..", "a"], "Rejected by API length validation before interpretation");
+pass("negative", "input_validation", "unknown", ["", "?", "..", "a"], { expected_behavior: "UNSUPPORTED", priority: "P2", notes: "Rejected with HTTP 400 by API length validation" });
 
 // Add realistic, uniquely worded variants until the permanent suite reaches 280 cases.
 const variantSeeds = rows.filter((row) => row.expected_behavior === "PASS" && !row.conversation_id);

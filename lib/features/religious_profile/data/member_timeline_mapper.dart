@@ -1,6 +1,13 @@
 import '../models/religious_profile.dart';
 
-enum MemberTimelineCategory { vocation, community, ministry, office, leave }
+enum MemberTimelineCategory {
+  vocation,
+  transfer,
+  community,
+  ministry,
+  office,
+  leave,
+}
 
 class MemberTimelineEvent {
   const MemberTimelineEvent({
@@ -65,6 +72,19 @@ class MemberTimelineMapper {
           sourceType: 'member_community_assignments',
           fallbackTitle: 'Community Assignment',
           entityType: 'community',
+        ),
+      for (final transfer in profile.sections.transfers)
+        MemberTimelineEvent(
+          id: transfer.id,
+          sourceId: transfer.id,
+          sourceType: 'member_transfers',
+          category: MemberTimelineCategory.transfer,
+          title: 'Transfer',
+          context: transfer.movementLabel,
+          startDate: transfer.effectiveDate,
+          relatedEntityType: 'community_transfer',
+          relatedEntityId: transfer.toCommunityId ?? transfer.fromCommunityId,
+          isCurrent: false,
         ),
       for (final assignment in profile.sections.ministryAssignments)
         _assignmentEvent(

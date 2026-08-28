@@ -18,16 +18,41 @@ class SupabaseReligiousProfileRepository implements ReligiousProfileRepository {
       debugPrint('[ProvincialProfileRPC] member_id=$memberId');
     }
     try {
-      final raw = await _client.rpc(
-        'get_provincial_member_profile_safe',
-        params: {'p_member_id': memberId},
-      );
+      final results = await Future.wait<dynamic>([
+        Future<dynamic>.value(
+          _client.rpc(
+            'get_provincial_member_profile_safe',
+            params: {'p_member_id': memberId},
+          ),
+        ),
+        Future<dynamic>.value(
+          _client
+              .from('v_member_languages')
+              .select()
+              .eq('member_id', memberId)
+              .order('is_primary', ascending: false)
+              .order('language_name'),
+        ),
+        Future<dynamic>.value(
+          _client
+              .from('v_member_transfers')
+              .select()
+              .eq('member_id', memberId)
+              .eq('status_code', 'CONFIRMED')
+              .lte('effective_date', DateTime.now().toIso8601String())
+              .order('effective_date', ascending: false),
+        ),
+      ]);
+      final raw = results[0];
       if (raw is! Map) {
         throw const ReligiousProfileException(
           ReligiousProfileFailureKind.notFound,
         );
       }
-      return _mapProvincialRpcProfile(Map<String, dynamic>.from(raw), memberId);
+      final row = Map<String, dynamic>.from(raw);
+      row['languages'] = results[1];
+      row['transfers'] = results[2];
+      return _mapProvincialRpcProfile(row, memberId);
     } on ReligiousProfileException {
       rethrow;
     } on PostgrestException catch (error) {
@@ -306,6 +331,8 @@ class SupabaseReligiousProfileRepository implements ReligiousProfileRepository {
         qualifications: _mapRows(
           row['qualifications'],
         ).map(_qualification).toList(),
+        languages: _mapRows(row['languages']).map(_language).toList(),
+        transfers: _mapRows(row['transfers']).map(_transfer).toList(),
         communityAssignments: communityAssignments,
         ministryAssignments: ministryAssignments,
         offices: _mapRows(row['office_appointments']).map(_rpcOffice).toList(),
@@ -498,6 +525,28 @@ class SupabaseReligiousProfileRepository implements ReligiousProfileRepository {
     country: _text(row, ['country', 'country_name']),
     notes: _text(row, ['notes', 'remarks']),
   );
+
+  MemberLanguage _language(Map<String, dynamic> row) => MemberLanguage(
+    name: _text(row, ['language_name']) ?? 'Language',
+    code: _text(row, ['language_code']),
+    proficiencyLevelCode: _text(row, ['proficiency_level_code']),
+    canSpeak: row['can_speak'] as bool?,
+    canRead: row['can_read'] as bool?,
+    canWrite: row['can_write'] as bool?,
+    isPrimary: row['is_primary'] == true,
+    isNative: row['is_native'] as bool?,
+  );
+
+  MemberTransferRecord _transfer(Map<String, dynamic> row) =>
+      MemberTransferRecord(
+        id: _text(row, ['transfer_id']) ?? '',
+        fromCommunityId: _text(row, ['from_community_id']),
+        fromCommunityName: _text(row, ['from_community_name']),
+        toCommunityId: _text(row, ['to_community_id']),
+        toCommunityName: _text(row, ['to_community_name']),
+        effectiveDate: _date(row, ['effective_date']) ?? DateTime(1),
+        transferTypeCode: _text(row, ['transfer_type_code']) ?? 'TRANSFER',
+      );
 
   OfficeAppointment _office(
     Map<String, dynamic> row, {

@@ -8,6 +8,10 @@ export type AskCommunioIntent =
   | "appointment_search"
   | "historical_office_holder"
   | "governance_body_membership"
+  | "governance_directory"
+  | "governance_body_profile"
+  | "governance_body_members"
+  | "governance_body_leader"
   | "profession_cohort"
   | "ordination_cohort"
   | "eligibility_search"
@@ -17,10 +21,13 @@ export type AskCommunioIntent =
   | "member_origin_search"
   | "current_location_search"
   | "age_search"
+  | "birthday_month"
+  | "vocation_anniversary"
   | "appointment_expiry"
   | "organization_identity"
   | "member_history"
   | "member_profile"
+  | "member_languages"
   | "vocation_cohort"
   | "present_state"
   | "location_entity_search"
@@ -40,9 +47,12 @@ export type AskCommunioIntent =
   | "community_profile"
   | "ministry_directory"
   | "ministry_profile"
+  | "ministry_establishment"
   | "leadership_history"
   | "community_history"
+  | "community_lifecycle"
   | "community_movement"
+  | "formal_transfer"
   | "historical_community_ranking"
   | "ministry_type_staffing"
   | "leadership_successor"
@@ -59,6 +69,8 @@ export type AskCommunioInterpretation = {
   age?: number;
   ageComparison?: "above" | "below";
   ageTo?: number;
+  month?: number;
+  anniversary?: number;
   outputType?: "records" | "count";
   timeRelation?: "in" | "before" | "after" | "current";
   entity?: string;
@@ -105,6 +117,10 @@ export const handledAskCommunioIntents = new Set<AskCommunioIntent>([
   "profession_cohort",
   "historical_office_holder",
   "governance_body_membership",
+  "governance_directory",
+  "governance_body_profile",
+  "governance_body_members",
+  "governance_body_leader",
   "ordination_cohort",
   "eligibility_search",
   "appointment_compliance",
@@ -113,10 +129,13 @@ export const handledAskCommunioIntents = new Set<AskCommunioIntent>([
   "member_origin_search",
   "current_location_search",
   "age_search",
+  "birthday_month",
+  "vocation_anniversary",
   "appointment_expiry",
   "organization_identity",
   "member_history",
   "member_profile",
+  "member_languages",
   "vocation_cohort",
   "present_state",
   "location_entity_search",
@@ -137,9 +156,12 @@ export const handledAskCommunioIntents = new Set<AskCommunioIntent>([
   "community_profile",
   "ministry_directory",
   "ministry_profile",
+  "ministry_establishment",
   "leadership_history",
   "community_history",
+  "community_lifecycle",
   "community_movement",
+  "formal_transfer",
   "historical_community_ranking",
   "ministry_type_staffing",
   "leadership_successor",
@@ -184,8 +206,23 @@ export function interpretAskCommunioQuestion(
   const composedCommunity = extractComposedCommunityQuery(q, year, outputType);
   if (composedCommunity) return composedCommunity;
 
+  const communityLifecycle = extractCommunityLifecycle(q, year);
+  if (communityLifecycle) return communityLifecycle;
+
+  const formalTransfer = extractFormalTransfer(question, year);
+  if (formalTransfer) return formalTransfer;
+
+  const vocationAnniversary = extractVocationAnniversary(q, year, outputType);
+  if (vocationAnniversary) return vocationAnniversary;
+
+  const birthdayMonth = extractBirthdayMonth(q, outputType);
+  if (birthdayMonth) return birthdayMonth;
+
   const governanceBody = extractGovernanceBody(q, year, outputType);
   if (governanceBody) return governanceBody;
+
+  const memberLanguages = extractMemberLanguages(question);
+  if (memberLanguages) return memberLanguages;
 
   const scopedMember = extractScopedMemberQuestion(question, q, year);
   if (scopedMember) return scopedMember;
@@ -295,6 +332,17 @@ export function interpretAskCommunioQuestion(
   const locationEntities = extractLocationEntitySearch(question);
   if (locationEntities) return locationEntities;
 
+  const age = extractAge(q);
+  if (age) {
+    return {
+      intent: "age_search",
+      age: age.value,
+      ageTo: age.valueTo,
+      ageComparison: age.comparison,
+      outputType,
+    };
+  }
+
   const present = presentStateQuestion(q);
   if (present) return present;
 
@@ -356,17 +404,6 @@ export function interpretAskCommunioQuestion(
     return {
       intent: "appointment_expiry",
       year: q.includes("this year") ? new Date().getUTCFullYear() : undefined,
-    };
-  }
-
-  const age = extractAge(q);
-  if (age) {
-    return {
-      intent: "age_search",
-      age: age.value,
-      ageTo: age.valueTo,
-      ageComparison: age.comparison,
-      outputType,
     };
   }
 
@@ -458,12 +495,113 @@ export function interpretAskCommunioQuestion(
   return { intent: "unknown" };
 }
 
+function extractFormalTransfer(
+  question: string,
+  year?: number,
+): AskCommunioInterpretation | undefined {
+  const trimmed = question.trim();
+  const communityMatch = year && trimmed.match(
+    /^who (?:was )?(?:formally )?(?:transferred|moved) from (.+?) in (?:18|19|20)\d{2}[?.!]*$/i,
+  );
+  if (communityMatch) {
+    return {
+      intent: "formal_transfer",
+      entity: communityMatch[1].trim(),
+      year,
+      topic: "from_community",
+    };
+  }
+  const historyMatch = trimmed.match(
+    /^(?:when was (.+?) (?:formally )?transferred(?: from one community to another)?|show (?:me )?the (?:formal )?transfer history of (.+?))[?.!]*$/i,
+  );
+  if (historyMatch) {
+    return {
+      intent: "formal_transfer",
+      entity: (historyMatch[1] ?? historyMatch[2]).trim(),
+      topic: "member_history",
+    };
+  }
+  const reasonMatch = trimmed.match(
+    /^why was (.+?) (?:formally )?transferred[?.!]*$/i,
+  );
+  if (reasonMatch) {
+    return {
+      intent: "formal_transfer",
+      entity: reasonMatch[1].trim(),
+      topic: "member_reason",
+    };
+  }
+  return undefined;
+}
+
+function extractCommunityLifecycle(
+  q: string,
+  year?: number,
+): AskCommunioInterpretation | undefined {
+  if (!year) return undefined;
+  if (
+    /^(?:which |list |show )?communities (?:opened|established) in (?:18|19|20)\d{2}$/
+      .test(q)
+  ) {
+    return { intent: "community_lifecycle", topic: "OPENED", year };
+  }
+  if (
+    /^(?:which |list |show )?communities closed in (?:18|19|20)\d{2}$/
+      .test(q)
+  ) {
+    return { intent: "community_lifecycle", topic: "CLOSED", year };
+  }
+  return undefined;
+}
+
+function extractMemberLanguages(
+  question: string,
+): AskCommunioInterpretation | undefined {
+  const patterns: RegExp[] = [
+    /^what languages does (.+?) speak[?.!]*$/i,
+    /^which languages does (.+?) know[?.!]*$/i,
+    /^languages of (.+?)[?.!]*$/i,
+  ];
+  for (const pattern of patterns) {
+    const match = question.trim().match(pattern);
+    if (match) {
+      return {
+        intent: "member_languages",
+        entity: normalizeMemberEntity(match[1]),
+        topic: /\bspeak\b/i.test(question) ? "spoken" : "recorded",
+      };
+    }
+  }
+  return undefined;
+}
+
 function interpretFollowUp(
   q: string,
   context: AskCommunioContext | undefined,
   year: number | undefined,
   outputType: "records" | "count",
 ): AskCommunioInterpretation | undefined {
+  const governanceReference =
+    /\bit\b|\bthat (?:body|commission|council)\b/.test(q) &&
+    /\b(?:chair|chairs|chaired|chairperson|president|lead|leads|leader|members?)\b/
+      .test(q);
+  if (governanceReference) {
+    const type = context?.focus_entity_type ?? context?.primary_entity_type;
+    const name = context?.focus_entity_name ?? context?.primary_entity_name;
+    const id = context?.focus_entity_id ?? context?.primary_entity_id;
+    if (type !== "governance_body" || !name) {
+      return { intent: "clarification_needed", topic: "governance_reference" };
+    }
+    return {
+      intent:
+        /\b(?:chair|chairs|chaired|chairperson|president|lead|leads|leader)\b/
+            .test(q)
+          ? "governance_body_leader"
+          : "governance_body_members",
+      entity: name,
+      entityId: id,
+    };
+  }
   const personReference =
     /\b(?:he|him|his|that member|this member|the same person|that person)\b/
       .test(q);
@@ -471,10 +609,14 @@ function interpretFollowUp(
     /\b(?:its|that community|this community|the same community|that ministry|this ministry)\b/
       .test(q);
   const contextualThere = /\bthere\b/.test(q) &&
-    /\b(?:lives?|lived|members?|superior|community|ministry)\b/.test(q) &&
+    /\b(?:assigned|works?|staffing|lives?|lived|members?|superior|community|ministry)\b/
+      .test(q) &&
     (!context || context.focus_entity_type === "community" ||
       context.primary_entity_type === "community" ||
-      context.ambiguous_entity_type === "community");
+      context.focus_entity_type === "ministry" ||
+      context.primary_entity_type === "ministry" ||
+      context.ambiguous_entity_type === "community" ||
+      context.ambiguous_entity_type === "ministry");
   const placeReference = explicitPlaceReference || contextualThere;
   if (!personReference && !placeReference) return undefined;
   if (!context) {
@@ -531,6 +673,18 @@ function interpretFollowUp(
   const communityName = context.focus_entity_name ??
     context.primary_entity_name;
   const communityId = context.focus_entity_id ?? context.primary_entity_id;
+  if (communityType === "ministry" && communityName) {
+    if (/\b(?:assigned|works?|staffing|members?|religious|people)\b/.test(q)) {
+      return {
+        intent: "ministry_assignment_history",
+        entity: communityName,
+        entityId: communityId,
+        topic: "current",
+        outputType,
+      };
+    }
+    return { intent: "clarification_needed", topic: "ministry_reference" };
+  }
   if (
     context?.ambiguous_entity_type === "community" ||
     context?.entity_set_type === "community" &&
@@ -1035,7 +1189,8 @@ function extractCommunityDirectory(
   outputType: "records" | "count",
 ): AskCommunioInterpretation | undefined {
   if (
-    /^(?:list|show)(?: all)? (?:active )?communities$/.test(q) ||
+    /^(?:(?:list|show)(?: me)?(?: a list)?(?: of)?|give me a list of|what) (?:the )?(?:all )?(?:active )?communities(?: are there)?$/
+      .test(q) ||
     /^community directory$/.test(q)
   ) {
     return { intent: "community_directory", topic: "active", outputType };
@@ -1063,19 +1218,30 @@ function extractMinistryDirectory(
     return { intent: "ministry_directory", topic: "all", outputType: "count" };
   }
   if (
-    /^(?:list|show)(?: all)? (?:active )?ministries$/.test(q) ||
+    /^(?:(?:list|show)(?: me)?(?: a list)?(?: of)?|give me a list of|what) (?:the )?(?:all )?(?:active )?ministries(?: are there)?$/
+      .test(q) ||
     /^ministry directory$/.test(q)
   ) {
     return { intent: "ministry_directory", topic: "all", outputType };
   }
   const categories: Array<[RegExp, string]> = [
     [/^(?:schools?|educational institutions?)$/, "school"],
-    [/^parishes$/, "parish"],
+    [/^parish(?:es)?$/, "parish"],
     [/^hospitals?$/, "hospital"],
     [/^formation houses?$/, "formation_house"],
     [/^retreat (?:centres?|centers?)$/, "retreat_centre"],
     [/^old age homes?$/, "old_age_home"],
   ];
+  const countPhrase = q.match(
+    /^(?:how many|number of|count(?: the| of)?)\s+(?:active )?(.+?)(?:\s+ministries)?(?:\s+are there)?$/,
+  )?.[1];
+  if (countPhrase) {
+    for (const [pattern, topic] of categories) {
+      if (pattern.test(countPhrase)) {
+        return { intent: "ministry_directory", topic, outputType: "count" };
+      }
+    }
+  }
   const categoryPhrase = q.match(/^(?:list|show)(?: all)?(?: active)? (.+)$/)
     ?.[1];
   if (categoryPhrase) {
@@ -1102,6 +1268,16 @@ function extractNamedCommunityQuestion(
   year: number | undefined,
   outputType: "records" | "count",
 ): AskCommunioInterpretation | undefined {
+  const opening = question.match(
+    /^when (?:(?:was|is) (?:the )?(.+?) (?:formed|started|established|opened|founded|began)|did (?:the )?(.+?) (?:form|start|open|begin))[?.!]*$/i,
+  );
+  if (opening && /\bcommunity\b/i.test(opening[1] ?? opening[2])) {
+    return {
+      intent: "community_lifecycle",
+      entity: (opening[1] ?? opening[2]).trim(),
+      topic: "OPENED",
+    };
+  }
   const superior = question.match(
     /^who (?:leads?|heads?)\s+(.+?community(?:\s+.+)?)[?.!]*$/i,
   );
@@ -1135,6 +1311,38 @@ function extractNamedMinistryQuestion(
   year: number | undefined,
   outputType: "records" | "count",
 ): AskCommunioInterpretation | undefined {
+  const establishment = question.match(
+    /^when (?:(?:was|is) (.+?) (?:started|established|opened|founded)|did (.+?) (?:start|open|begin))[?.!]*$/i,
+  );
+  if (
+    establishment &&
+    /\b(?:college|school|parish|hospital|ministry|formation house|institute|centre|center)\b/i
+      .test(establishment[1] ?? establishment[2])
+  ) {
+    return {
+      intent: "ministry_establishment",
+      entity: (establishment[1] ?? establishment[2]).trim(),
+    };
+  }
+  const ordinalLeader = question.match(
+    /^(?:who (?:was|is) (?:the )?)?(first|earliest|initial|founding|previous|current|present|former|past) principal (?:of|at)\s+(.+?)[?.!]*$/i,
+  );
+  if (ordinalLeader) {
+    const ordinal = ordinalLeader[1].toLowerCase();
+    const topic = ["first", "earliest", "initial", "founding"].includes(ordinal)
+      ? "earliest"
+      : ["current", "present"].includes(ordinal)
+      ? "current"
+      : ordinal === "previous"
+      ? "previous"
+      : "past";
+    return {
+      intent: "ministry_leadership_history",
+      entity: ordinalLeader[2].trim(),
+      role: "principal",
+      topic,
+    };
+  }
   const assignment = question.match(
     /^who (?:currently )?(?:works?|worked|serves?|served) at\s+(.+?)(?:\s+in\s+(?:18|19|20)\d{2})?[?.!]*$/i,
   ) ??
@@ -1142,14 +1350,17 @@ function extractNamedMinistryQuestion(
       /^who (?:is|was) assigned to\s+(.+?)(?:\s+in\s+(?:18|19|20)\d{2})?[?.!]*$/i,
     ) ??
     question.match(
-      /^how many (?:members|religious) (?:work|worked|serve|served|are assigned) (?:at|to)\s+(.+?)(?:\s+in\s+(?:18|19|20)\d{2})?[?.!]*$/i,
+      /^how many (?:members|religious|people) (?:works?|worked|serves?|served|are assigned) (?:at|to)\s+(.+?)(?:\s+in\s+(?:18|19|20)\d{2})?[?.!]*$/i,
+    ) ??
+    question.match(
+      /^(?:number of (?:members|religious|people)(?: working)?|staffing) at\s+(.+?)[?.!]*$/i,
     ) ??
     question.match(
       /^(?:show|list) (?:the )?members assigned to\s+(.+?)[?.!]*$/i,
     );
   if (
     !assignment ||
-    !/\b(?:school|parish|hospital|ministry|formation house|centre|center)\b/i
+    !/\b(?:college|school|parish|hospital|ministry|formation house|institute|centre|center)\b/i
       .test(assignment[1])
   ) return undefined;
   return {
@@ -1398,12 +1609,22 @@ function extractAge(
   | { value: number; valueTo?: number; comparison: "above" | "below" }
   | undefined {
   const between = q.match(
-    /\bbetween\s+(\d{1,3})\s+(?:and|to)\s+(\d{1,3})(?:\s+years?\s+old)?\b/,
+    /\bbetween\s+(\d{1,3})(?:\s+years?\s+old)?\s+(?:and|to)\s+(\d{1,3})(?:\s+years?\s+old)?\b/,
   );
   if (between) {
     return {
       value: Number(between[1]),
       valueTo: Number(between[2]),
+      comparison: "above",
+    };
+  }
+  const range = q.match(
+    /\b(?:ages?|aged|from)\s+(\d{1,3})\s*(?:-|–|—|to)\s*(\d{1,3})(?:\s+years?)?(?:\s+old)?\b/,
+  );
+  if (range) {
+    return {
+      value: Number(range[1]),
+      valueTo: Number(range[2]),
       comparison: "above",
     };
   }
@@ -1426,6 +1647,65 @@ function extractAge(
   return {
     value: Number(match[1]),
     comparison: /under|below|younger/.test(match[0]) ? "below" : "above",
+  };
+}
+
+const monthNumbers = new Map([
+  ["january", 1],
+  ["february", 2],
+  ["march", 3],
+  ["april", 4],
+  ["may", 5],
+  ["june", 6],
+  ["july", 7],
+  ["august", 8],
+  ["september", 9],
+  ["october", 10],
+  ["november", 11],
+  ["december", 12],
+]);
+
+function extractBirthdayMonth(
+  q: string,
+  outputType: "records" | "count",
+): AskCommunioInterpretation | undefined {
+  if (!/\bbirthdays?\b/.test(q)) return undefined;
+  for (const [name, month] of monthNumbers) {
+    if (new RegExp(`\\b${name}\\b`).test(q)) {
+      return { intent: "birthday_month", month, outputType };
+    }
+  }
+  return undefined;
+}
+
+function extractVocationAnniversary(
+  q: string,
+  explicitYear: number | undefined,
+  outputType: "records" | "count",
+): AskCommunioInterpretation | undefined {
+  if (
+    !/\b(?:first|temporary) (?:vows?|professions?)\b/.test(q) ||
+    !/\b(?:anniversar(?:y|ies)|years? of)\b/.test(q)
+  ) return undefined;
+  const ordinal = q.match(/\b(\d{1,3})(?:st|nd|rd|th)\b/);
+  const yearsOf = q.match(/\b(\d{1,3})\s+years? of\b/);
+  const anniversary = Number(ordinal?.[1] ?? yearsOf?.[1]);
+  if (!Number.isInteger(anniversary) || anniversary < 1 || anniversary > 100) {
+    return undefined;
+  }
+  const currentYear = new Date().getUTCFullYear();
+  const targetYear = explicitYear ??
+    (/\bnext year\b/.test(q)
+      ? currentYear + 1
+      : /\blast year\b/.test(q)
+      ? currentYear - 1
+      : currentYear);
+  return {
+    intent: "vocation_anniversary",
+    topic: "FIRST_PROFESSION",
+    anniversary,
+    year: targetYear,
+    outputType,
   };
 }
 
@@ -1457,6 +1737,49 @@ function extractGovernanceBody(
   year?: number,
   outputType: "records" | "count" = "records",
 ): AskCommunioInterpretation | undefined {
+  if (
+    /^(?:list|show)(?: me)? (?:the )?governance bodies$/.test(q) ||
+    /^(?:what|which) governance bodies (?:are there|do we have|are recorded)$/
+      .test(q)
+  ) {
+    return { intent: "governance_directory", outputType };
+  }
+  const leader = q.match(
+    /^(?:who|which person) (?:currently )?(?:chairs?|chaired|leads?) (?:the )?(.+?)$/,
+  ) ?? q.match(
+    /^who is (?:the )?(?:current )?(?:chair|chairperson|president|leader) of (?:the )?(.+?)$/,
+  );
+  if (
+    leader &&
+    /\b(?:commission|committee|council|governance body)\b/.test(leader[1])
+  ) {
+    return {
+      intent: "governance_body_leader",
+      entity: leader[1].trim().replace(/^the\s+/, ""),
+    };
+  }
+  const members = q.match(
+    /^(?:who (?:belongs to|is on|serves on)|members? of|who are (?:the )?members? of) (?:the )?(.+?)$/,
+  );
+  if (
+    members && !year &&
+    /\b(?:commission|committee|council|governance body)\b/.test(members[1])
+  ) {
+    return {
+      intent: "governance_body_members",
+      entity: members[1].trim().replace(/^the\s+/, ""),
+      outputType,
+    };
+  }
+  const profile = q.match(
+    /^(?:tell me about|describe|show (?:me )?(?:details (?:for|of|about) ))(?:the )?(.+?(?:commission|committee|council|governance body))$/,
+  );
+  if (profile) {
+    return {
+      intent: "governance_body_profile",
+      entity: profile[1].trim().replace(/^the\s+/, ""),
+    };
+  }
   if (!year) return undefined;
   if (
     /\b(?:provincial council|council members?|served on (?:the )?council|on (?:the )?provincial council)\b/

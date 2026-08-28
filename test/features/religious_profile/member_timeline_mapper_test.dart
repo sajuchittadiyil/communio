@@ -247,6 +247,41 @@ void main() {
   test('empty structured history produces an empty timeline', () {
     expect(MemberTimelineMapper.fromProfile(_profile()), isEmpty);
   });
+
+  test('formal transfer is distinct from adjacent community assignments', () {
+    final events = MemberTimelineMapper.fromProfile(
+      _profile(
+        transfers: [
+          MemberTransferRecord(
+            id: 'transfer-1',
+            fromCommunityName: 'St. Antony Community',
+            toCommunityName: 'St. Anne Community',
+            effectiveDate: DateTime(2026, 8, 8),
+          ),
+        ],
+        communities: [
+          AssignmentRecord(
+            kind: 'Community',
+            name: 'Adjacent Assignment Only',
+            fromDate: DateTime(2026, 8, 8),
+          ),
+        ],
+      ),
+    );
+
+    final transfer = events.singleWhere(
+      (event) => event.category == MemberTimelineCategory.transfer,
+    );
+    expect(transfer.title, 'Transfer');
+    expect(transfer.context, 'St. Antony Community → St. Anne Community');
+    expect(transfer.startDate, DateTime(2026, 8, 8));
+    expect(
+      events.where(
+        (event) => event.category == MemberTimelineCategory.transfer,
+      ),
+      hasLength(1),
+    );
+  });
 }
 
 ReligiousProfile _profile({
@@ -255,6 +290,7 @@ ReligiousProfile _profile({
   List<AssignmentRecord> ministries = const [],
   List<OfficeAppointment> offices = const [],
   List<LeaveRecord> leave = const [],
+  List<MemberTransferRecord> transfers = const [],
 }) => ReligiousProfile(
   memberId: 'member-1',
   religiousId: 'REL-0001',
@@ -266,5 +302,6 @@ ReligiousProfile _profile({
     ministryAssignments: ministries,
     offices: offices,
     leaveHistory: leave,
+    transfers: transfers,
   ),
 );

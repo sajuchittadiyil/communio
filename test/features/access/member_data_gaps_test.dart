@@ -39,6 +39,60 @@ void main() {
     expect(profile.sections.contacts.single.label, 'Official Email');
   });
 
+  test('self profile maps structured languages and nullable capabilities', () {
+    final profile = SupabaseMemberSelfProfileRepository.mapProfile({
+      'member_id': 'roy-uuid',
+      'display_name': 'Roy Noronha',
+      'member_status_code': 'active',
+      'languages': [
+        {
+          'language_name': 'Kannada',
+          'language_code': 'kn',
+          'proficiency_level_code': 'PROFICIENT',
+          'can_speak': true,
+          'can_read': true,
+          'can_write': null,
+          'is_primary': true,
+          'is_native': false,
+        },
+      ],
+    }, expectedMemberId: 'roy-uuid');
+
+    final language = profile.sections.languages.single;
+    expect(language.name, 'Kannada');
+    expect(language.proficiencyLabel, 'Proficient');
+    expect(language.capabilityLabel, 'Proficient · Speak · Read');
+    expect(language.canWrite, isNull);
+    expect(language.isPrimary, isTrue);
+  });
+
+  test('self profile maps only explicit transfer rows', () {
+    final profile = SupabaseMemberSelfProfileRepository.mapProfile({
+      'member_id': 'roy-uuid',
+      'display_name': 'Roy Noronha',
+      'member_status_code': 'active',
+      'community_assignments': [
+        {'name': 'Assignment history is not a transfer'},
+      ],
+      'transfers': [
+        {
+          'transfer_id': 'transfer-1',
+          'from_community_id': 'community-1',
+          'from_community_name': 'St. Antony Community',
+          'to_community_id': 'community-2',
+          'to_community_name': 'St. Anne Community',
+          'effective_date': '2026-08-08',
+          'transfer_type_code': 'TRANSFER',
+        },
+      ],
+    }, expectedMemberId: 'roy-uuid');
+
+    final transfer = profile.sections.transfers.single;
+    expect(transfer.id, 'transfer-1');
+    expect(transfer.movementLabel, 'St. Antony Community → St. Anne Community');
+    expect(transfer.effectiveDate, DateTime(2026, 8, 8));
+  });
+
   test('current resident mapping uses inclusive boundaries', () {
     final residents = MemberCommunityResidentMapper.fromRows([
       _residentRow('starts-today', from: '2026-08-22'),
@@ -107,6 +161,14 @@ void main() {
           'community_id': 'sacred-heart-uuid',
         },
       ],
+      lifecycleRows: const [
+        {
+          'community_id': 'sacred-heart-uuid',
+          'event_type_code': 'OPENED',
+          'effective_date': '1998-01-01',
+          'date_precision_code': 'YEAR',
+        },
+      ],
       publicUrl: (bucket, path) => 'https://storage.test/$bucket/$path',
     ).single;
 
@@ -133,6 +195,9 @@ void main() {
       'https://example.test/samuel.webp',
     );
     expect(community.currentMovements, isEmpty);
+    expect(community.lifecycleEvents.single.typeCode, 'OPENED');
+    expect(community.lifecycleEvents.single.effectiveDate.year, 1998);
+    expect(community.lifecycleEvents.single.datePrecisionCode, 'YEAR');
     expect(community.history, isEmpty);
   });
 

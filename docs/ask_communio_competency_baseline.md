@@ -5,11 +5,11 @@ Generated on 2026-08-27 against the current local intent interpreter. This is an
 ## Summary
 
 - Total cases: 291
-- Parser/context passing: 281
-- Known gaps (excluded from score): 10
+- Parser/context passing: 291
+- Known gaps (excluded from score): 0
 - True parser failures: 0
 - P0 regression failures: 0
-- Scored baseline: 281/281 (100.0%)
+- Scored baseline: 291/291 (100.0%)
 - Conversation parser/context turns: 18/18
 - Database-dependent assertions: unverified locally
 
@@ -17,8 +17,8 @@ Generated on 2026-08-27 against the current local intent interpreter. This is an
 
 | Classification | Cases | Parser/context passes |
 | --- | ---: | ---: |
-| PASS | 249 | 249 |
-| KNOWN_GAP | 10 | 0 |
+| PASS | 259 | 259 |
+| KNOWN_GAP | 0 | 0 |
 | CLARIFY | 15 | 15 |
 | ZERO_RESULT | 3 | 3 |
 | UNSUPPORTED | 14 | 14 |
@@ -28,17 +28,17 @@ Generated on 2026-08-27 against the current local intent interpreter. This is an
 
 | Domain | Passing/scored | Score |
 | --- | ---: | ---: |
-| members | 24/24 | 100.0% |
+| members | 25/25 | 100.0% |
 | age_demographics | 20/20 | 100.0% |
 | current_communities | 25/25 | 100.0% |
-| historical_community | 17/17 | 100.0% |
+| historical_community | 20/20 | 100.0% |
 | ministries | 23/23 | 100.0% |
 | leadership | 25/25 | 100.0% |
 | vocation | 27/27 | 100.0% |
 | appointment_history | 20/20 | 100.0% |
 | qualifications_eligibility | 17/17 | 100.0% |
 | aggregations | 20/20 | 100.0% |
-| governance | 4/4 | 100.0% |
+| governance | 10/10 | 100.0% |
 | entity_resolution | 16/16 | 100.0% |
 | conversation | 18/18 | 100.0% |
 | composed_queries | 10/10 | 100.0% |
@@ -50,7 +50,7 @@ Generated on 2026-08-27 against the current local intent interpreter. This is an
 | --- | ---: | ---: |
 | P0 | 60/60 | 100.0% |
 | P1 | 151/151 | 100.0% |
-| P2 | 70/70 | 100.0% |
+| P2 | 80/80 | 100.0% |
 
 ## P0 regression failures
 
@@ -58,16 +58,7 @@ None at the parser/context layer.
 
 ## Top 20 unsupported capabilities (known gaps)
 
-- AC-024: what languages does Joseph Varghese speak — No normalized member-language relation or proficiency model
-- AC-088: communities opened in 2015 — Lifecycle/explicit transfer semantics are not reliably stored
-- AC-089: communities closed in 2015 — Lifecycle/explicit transfer semantics are not reliably stored
-- AC-090: who transferred from St Antony Community in 2015 — Lifecycle/explicit transfer semantics are not reliably stored
-- AC-227: list governance bodies — Governance body schema not exposed to Ask Communio
-- AC-228: show governance bodies — Governance body schema not exposed to Ask Communio
-- AC-229: who belongs to education commission — Governance body schema not exposed to Ask Communio
-- AC-230: who belongs to finance commission — Governance body schema not exposed to Ask Communio
-- AC-231: members of sustainability commission — Governance body schema not exposed to Ask Communio
-- AC-232: who chaired the education commission — Governance body schema not exposed to Ask Communio
+
 
 ## Top 20 parser failures
 

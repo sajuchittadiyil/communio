@@ -688,6 +688,40 @@ class _CommunityHistory extends StatelessWidget {
         ],
 
         _Section(
+          title: 'Community History',
+          child: community.lifecycleEvents.isEmpty
+              ? Text(
+                  'No lifecycle events are recorded.',
+                  style: AppTypography.responsive(
+                    context,
+                  ).bodySmall.copyWith(color: AppColors.textSecondary),
+                )
+              : Column(
+                  children: community.lifecycleEvents.map((event) {
+                    final when = event.datePrecisionCode == 'YEAR'
+                        ? event.effectiveDate.year.toString()
+                        : _date(event.effectiveDate);
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        event.typeCode == 'CLOSED'
+                            ? Icons.door_back_door_outlined
+                            : event.typeCode == 'REOPENED'
+                            ? Icons.lock_open_rounded
+                            : Icons.history_toggle_off_rounded,
+                        color: event.typeCode == 'CLOSED'
+                            ? AppColors.warning
+                            : AppColors.success,
+                      ),
+                      title: Text(event.typeLabel),
+                      subtitle: Text(when),
+                    );
+                  }).toList(),
+                ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+
+        _Section(
           title: 'Community Membership History',
           child: membershipHistory.isEmpty
               ? Text(

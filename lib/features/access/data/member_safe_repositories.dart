@@ -328,6 +328,7 @@ class MemberCalendarRepository implements ProvinceRepository {
     residents: residents,
     ministries: community.ministries,
     ministryRecords: community.ministryRecords,
+    lifecycleEvents: community.lifecycleEvents,
   );
 }
 
@@ -368,11 +369,17 @@ class SupabaseMemberSafeProvinceRepository implements ProvinceRepository {
             )
             .select()
             .order('ministry_name'),
+        _client
+            .from('v_community_lifecycle')
+            .select()
+            .order('effective_date')
+            .order('event_type_code'),
       ]);
       return mapCommunities(
         List<Map<String, dynamic>>.from(results[0]),
         residentRows: List<Map<String, dynamic>>.from(results[1]),
         ministryRows: List<Map<String, dynamic>>.from(results[2]),
+        lifecycleRows: List<Map<String, dynamic>>.from(results[3]),
         publicUrl: _publicCoverUrl,
       );
     } catch (error, stackTrace) {
@@ -388,6 +395,7 @@ class SupabaseMemberSafeProvinceRepository implements ProvinceRepository {
     List<Map<String, dynamic>> rows, {
     List<Map<String, dynamic>> residentRows = const [],
     List<Map<String, dynamic>> ministryRows = const [],
+    List<Map<String, dynamic>> lifecycleRows = const [],
     String? Function(String bucket, String? path)? publicUrl,
   }) => rows
       .map((row) {
@@ -421,6 +429,22 @@ class SupabaseMemberSafeProvinceRepository implements ProvinceRepository {
           communityCategory: row['community_category']?.toString(),
           recordStatus: row['active'] == false ? 'Inactive' : 'Active',
           establishedYear: opened?.year,
+          lifecycleEvents: lifecycleRows
+              .where((event) => event['community_id']?.toString() == id)
+              .map(
+                (event) => CommunityLifecycleEvent(
+                  typeCode:
+                      event['event_type_code']?.toString() ?? 'STATUS_CHANGED',
+                  effectiveDate:
+                      DateTime.tryParse(
+                        event['effective_date']?.toString() ?? '',
+                      ) ??
+                      DateTime(1),
+                  datePrecisionCode:
+                      event['date_precision_code']?.toString() ?? 'DAY',
+                ),
+              )
+              .toList(growable: false),
           coverImagePath: row['cover_image_path']?.toString(),
           coverImageUrl: publicUrl?.call(
             'community-covers',
@@ -684,16 +708,38 @@ class SupabaseOtherMemberProfileRepository
   @override
   Future<ReligiousProfile> fetchProfile(String memberId) async {
     try {
-      final raw = await _client.rpc(
-        rpcName,
-        params: {'target_member_id': memberId},
-      );
+      final results = await Future.wait<dynamic>([
+        Future<dynamic>.value(
+          _client.rpc(rpcName, params: {'target_member_id': memberId}),
+        ),
+        Future<dynamic>.value(
+          _client
+              .from('v_member_languages')
+              .select()
+              .eq('member_id', memberId)
+              .order('is_primary', ascending: false)
+              .order('language_name'),
+        ),
+        Future<dynamic>.value(
+          _client
+              .from('v_member_transfers')
+              .select()
+              .eq('member_id', memberId)
+              .eq('status_code', 'CONFIRMED')
+              .lte('effective_date', DateTime.now().toIso8601String())
+              .order('effective_date', ascending: false),
+        ),
+      ]);
+      final raw = results[0];
       if (raw is! Map) {
         throw const ReligiousProfileException(
           ReligiousProfileFailureKind.notFound,
         );
       }
-      return mapProfile(Map<String, dynamic>.from(raw), memberId: memberId);
+      final row = Map<String, dynamic>.from(raw);
+      row['languages'] = results[1];
+      row['transfers'] = results[2];
+      return mapProfile(row, memberId: memberId);
     } on ReligiousProfileException {
       rethrow;
     } on AuthException catch (error) {
@@ -800,6 +846,12 @@ class SupabaseOtherMemberProfileRepository
               ),
             )
             .toList(growable: false),
+        languages: _rows(
+          row['languages'],
+        ).map(_language).toList(growable: false),
+        transfers: _rows(
+          row['transfers'],
+        ).map(_transfer).toList(growable: false),
         communityAssignments: _rows(
           row['community_assignments'],
         ).map((item) => _assignment(item, 'Community')).toList(growable: false),
@@ -836,6 +888,28 @@ class SupabaseOtherMemberProfileRepository
         role: _label(_text(row['responsibility_code'])),
         fromDate: _date(row['from_date']),
         toDate: _date(row['to_date']),
+      );
+
+  static MemberLanguage _language(Map<String, dynamic> row) => MemberLanguage(
+    name: _text(row['language_name']) ?? 'Language',
+    code: _text(row['language_code']),
+    proficiencyLevelCode: _text(row['proficiency_level_code']),
+    canSpeak: row['can_speak'] as bool?,
+    canRead: row['can_read'] as bool?,
+    canWrite: row['can_write'] as bool?,
+    isPrimary: row['is_primary'] == true,
+    isNative: row['is_native'] as bool?,
+  );
+
+  static MemberTransferRecord _transfer(Map<String, dynamic> row) =>
+      MemberTransferRecord(
+        id: _text(row['transfer_id']) ?? '',
+        fromCommunityId: _text(row['from_community_id']),
+        fromCommunityName: _text(row['from_community_name']),
+        toCommunityId: _text(row['to_community_id']),
+        toCommunityName: _text(row['to_community_name']),
+        effectiveDate: _date(row['effective_date']) ?? DateTime(1),
+        transferTypeCode: _text(row['transfer_type_code']) ?? 'TRANSFER',
       );
   static List<Map<String, dynamic>> _rows(dynamic value) => value is List
       ? value.whereType<Map>().map(Map<String, dynamic>.from).toList()

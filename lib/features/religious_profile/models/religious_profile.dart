@@ -101,6 +101,8 @@ class ReligiousProfileSections {
   const ReligiousProfileSections({
     this.vocationEvents = const [],
     this.qualifications = const [],
+    this.languages = const [],
+    this.transfers = const [],
     this.communityAssignments = const [],
     this.ministryAssignments = const [],
     this.offices = const [],
@@ -114,6 +116,8 @@ class ReligiousProfileSections {
 
   final List<VocationEvent> vocationEvents;
   final List<QualificationRecord> qualifications;
+  final List<MemberLanguage> languages;
+  final List<MemberTransferRecord> transfers;
   final List<AssignmentRecord> communityAssignments;
   final List<AssignmentRecord> ministryAssignments;
   final List<OfficeAppointment> offices;
@@ -123,6 +127,68 @@ class ReligiousProfileSections {
   final List<LabeledValue> contacts;
   final List<DocumentRecord> documents;
   final Set<ProfileSection> failures;
+}
+
+class MemberTransferRecord {
+  const MemberTransferRecord({
+    required this.id,
+    required this.effectiveDate,
+    this.fromCommunityId,
+    this.fromCommunityName,
+    this.toCommunityId,
+    this.toCommunityName,
+    this.transferTypeCode = 'TRANSFER',
+  });
+
+  final String id;
+  final String? fromCommunityId;
+  final String? fromCommunityName;
+  final String? toCommunityId;
+  final String? toCommunityName;
+  final DateTime effectiveDate;
+  final String transferTypeCode;
+
+  String get movementLabel =>
+      '${fromCommunityName ?? 'External origin'} → ${toCommunityName ?? 'External destination'}';
+}
+
+class MemberLanguage {
+  const MemberLanguage({
+    required this.name,
+    this.code,
+    this.proficiencyLevelCode,
+    this.canSpeak,
+    this.canRead,
+    this.canWrite,
+    this.isPrimary = false,
+    this.isNative,
+  });
+
+  final String name;
+  final String? code;
+  final String? proficiencyLevelCode;
+  final bool? canSpeak;
+  final bool? canRead;
+  final bool? canWrite;
+  final bool isPrimary;
+  final bool? isNative;
+
+  String get proficiencyLabel => switch (proficiencyLevelCode) {
+    final value? =>
+      value
+          .toLowerCase()
+          .split('_')
+          .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+          .join(' '),
+    null => '',
+  };
+
+  String get capabilityLabel => [
+    if (proficiencyLabel.isNotEmpty) proficiencyLabel,
+    if (canSpeak == true) 'Speak',
+    if (canRead == true) 'Read',
+    if (canWrite == true) 'Write',
+  ].join(' · ');
 }
 
 enum ProfileSection {

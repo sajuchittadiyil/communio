@@ -11,6 +11,8 @@ import '../../../features/documents/screens/documents_screen.dart';
 import '../../../core/config/app_environment.dart';
 import '../../../core/widgets/module_background.dart';
 import '../../../features/dashboard/data/dashboard_repository.dart';
+import '../../../features/governance/data/governance_repository.dart';
+import '../../../features/governance/screens/governance_screens.dart';
 import '../../../features/religious_directory/data/member_directory_repository.dart';
 import '../../../features/religious_directory/models/member_directory_entry.dart';
 import '../../../features/religious_directory/screens/religious_directory_screen.dart';
@@ -34,6 +36,7 @@ class ShellDestinationView extends StatelessWidget {
     required this.onProfileBack,
     required this.dashboardRepository,
     required this.provinceRepository,
+    required this.governanceRepository,
     required this.organizationIdentityRepository,
     required this.onFormationFilter,
     required this.onAskCommunio,
@@ -60,6 +63,7 @@ class ShellDestinationView extends StatelessWidget {
   final String? profileMemberId;
   final DashboardRepository dashboardRepository;
   final ProvinceRepository provinceRepository;
+  final GovernanceRepository governanceRepository;
   final OrganizationIdentityRepository organizationIdentityRepository;
   final ValueChanged<String?> onFormationFilter;
   final VoidCallback onAskCommunio;
@@ -194,9 +198,17 @@ class ShellDestinationView extends StatelessWidget {
       );
     }
     if (item.destination == AppDestination.governance) {
-      return GovernanceScreen(
-        repository: provinceRepository,
-        onMember: onMemberSelected,
+      return GovernanceDirectoryScreen(
+        repository: governanceRepository,
+        onMember: (member) => onMemberSelected(
+          MemberDirectoryEntry(
+            id: member.memberId,
+            religiousId: member.religiousId ?? '',
+            displayName: member.displayName,
+            photoUrl: member.photoUrl,
+            memberStatus: 'Active',
+          ),
+        ),
       );
     }
     if (item.destination == AppDestination.calendar) {

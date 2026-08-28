@@ -12,6 +12,7 @@ import {
   filterMinistryTypeRows,
   filterPastOfficeTerms,
   matchingDirectoryRows,
+  resolveCommunityReference,
 } from "./wave1_query_logic.ts";
 import {
   durationLabel,
@@ -29,8 +30,27 @@ import {
   roleOf,
 } from "./wave3_query_logic.ts";
 import { ageSummary, distinctActiveCounts } from "./wave4_query_logic.ts";
+import {
+  governanceLeaders,
+  orderGovernanceMembers,
+  resolveGovernanceBody,
+} from "./governance_query_logic.ts";
+import {
+  lifecycleAnswer,
+  lifecycleEvidenceLabel,
+} from "./community_lifecycle_query_logic.ts";
+import {
+  formalTransferAnswer,
+  memberFormalTransferAnswer,
+} from "./formal_transfer_query_logic.ts";
 import { applySemanticContext } from "./semantic_context.ts";
 import type { SemanticContext, SemanticEntity } from "./semantic_context.ts";
+import {
+  ageInInclusiveRange,
+  birthdayMatchesMonth,
+  ordinalNumber,
+  professionYearForAnniversary,
+} from "./natural_language_analytics.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -109,7 +129,7 @@ Deno.serve(async (request) => {
     }
     if (
       memberLike &&
-      /\b(?:parents?|father|mother|siblings?|family|emergency|will|vault|digital safe|confidential|personnel file|private document|eligibility|financial|province-wide movement|provincial movement)\b/i
+      /\b(?:parents?|father|mother|siblings?|family|emergency|testament|vault|digital safe|confidential|personnel file|private document|eligibility|financial|province-wide movement|provincial movement)\b/i
         .test(question)
     ) {
       return json({
@@ -236,6 +256,8 @@ async function executeAllowedQuery(
       return accessRole !== "provincial"
         ? memberSafeProfileFact(client, input)
         : memberProfileFacts(client, input.entity, input.topic);
+    case "member_languages":
+      return memberLanguages(client, input);
     case "community_directory":
       return communityDirectory(
         client,
@@ -254,12 +276,18 @@ async function executeAllowedQuery(
       );
     case "ministry_profile":
       return ministryProfile(client, input.entity, accessRole);
+    case "ministry_establishment":
+      return ministryEstablishment(client, input.entity);
     case "leadership_history":
       return leadershipHistory(client, input.role ?? "provincial");
     case "community_history":
       return communityHistory(client, input.entity);
+    case "community_lifecycle":
+      return communityLifecycle(client, input);
     case "community_movement":
       return communityMovement(client, input);
+    case "formal_transfer":
+      return formalTransferSearch(client, input);
     case "historical_community_ranking":
       return historicalCommunityRanking(client, input.year);
     case "ministry_type_staffing":
@@ -321,10 +349,14 @@ async function executeAllowedQuery(
           ? "I have several members in the previous result. Which member do you mean?"
           : input.topic === "community_reference"
           ? "I have several communities in the previous result. Which community do you mean?"
+          : input.topic === "ministry_reference"
+          ? "Which ministry do you mean?"
           : input.topic === "member_follow_up"
           ? "What would you like to know about that member?"
           : input.topic === "community_follow_up"
           ? "What would you like to know about that community?"
+          : input.topic === "governance_reference"
+          ? "Which governance body do you mean?"
           : input.topic === "historical_community_ranking"
           ? "Historical community-size ranking is not supported yet. I can rank current communities or show a named community's membership in that year."
           : input.topic === "bare_entity"
@@ -346,6 +378,15 @@ async function executeAllowedQuery(
         input.ageTo,
         input.outputType,
       );
+    case "birthday_month":
+      return birthdayMonthSearch(client, input.month, input.outputType);
+    case "vocation_anniversary":
+      return vocationAnniversarySearch(
+        client,
+        input.anniversary,
+        input.year,
+        input.outputType,
+      );
     case "eligibility_search":
       return eligibilitySearch(client, input.role ?? "principal", input.entity);
     case "appointment_compliance":
@@ -362,6 +403,14 @@ async function executeAllowedQuery(
       return historicalOfficeHolder(client, input);
     case "governance_body_membership":
       return governanceBodyMembership(client, input);
+    case "governance_directory":
+      return governanceDirectory(client);
+    case "governance_body_profile":
+      return governanceBodyProfile(client, input);
+    case "governance_body_members":
+      return governanceBodyMembers(client, input);
+    case "governance_body_leader":
+      return governanceBodyLeader(client, input);
     case "organization_identity":
       return organizationIdentity(client, input.entity);
     case "community_superior_history":
@@ -1101,7 +1150,7 @@ async function communityDirectory(
     : "v_member_communities_safe";
   const { data, error } = await client.from(view).select("*").order("name");
   if (error) throw error;
-  const rows = data ?? [];
+  const rows: Row[] = (data ?? []).map((row) => ({ ...row }));
   if (outputType === "count") {
     return countResponse(
       `Communio currently records ${rows.length} active communities.`,
@@ -1367,6 +1416,37 @@ async function ministryProfile(
   );
 }
 
+async function ministryEstablishment(
+  client: SupabaseClient,
+  entity?: string,
+) {
+  const needle = normalizePlaceName(cleanEntity(entity), "ministry");
+  if (!needle) return noReliableAnswer("Please include a ministry name.");
+  const { data, error } = await client.from("ministries").select(
+    "id,name,code",
+  );
+  if (error) throw error;
+  const matches = matchingDirectoryRows(
+    data ?? [],
+    cleanEntity(entity),
+    "ministry",
+  );
+  if (!matches.length) return noReliableAnswer();
+  if (matches.length > 1) {
+    return clarificationResponse(
+      `I found more than one matching ministry. Did you mean: ${
+        matches.map(placeLabel).join("; ")
+      }?`,
+      matches,
+    );
+  }
+  return noReliableAnswer(
+    `Communio has no recorded establishment date for ${
+      nameOf(matches[0])
+    }. I won't infer one from staffing or assignment history.`,
+  );
+}
+
 async function leadershipHistory(client: SupabaseClient, role: string) {
   const [appointmentsResult, officeTypesResult] = await Promise.all([
     client.from("member_office_appointments").select("*"),
@@ -1424,14 +1504,39 @@ async function leadershipHistory(client: SupabaseClient, role: string) {
 async function resolveCommunityRow(
   client: SupabaseClient,
   entity?: string,
+  allowUniqueLocationFallback = false,
 ): Promise<{ row?: Row; result?: ReturnType<typeof response> }> {
   const { data, error } = await client.from("communities").select("*");
   if (error) throw error;
-  const matches = matchingDirectoryRows(
+  const resolution = resolveCommunityReference(
     data ?? [],
     cleanEntity(entity),
-    "community",
+    allowUniqueLocationFallback,
   );
+  const matches = resolution.matches;
+  if (resolution.conflict) {
+    const requested = cleanEntity(entity);
+    if (resolution.suggestions.length) {
+      return {
+        result: clarificationResponse(
+          `I couldn't find a community matching ${requested}. Did you mean: ${
+            resolution.suggestions.map(placeLabel).join("; ")
+          }?`,
+          resolution.suggestions,
+        ),
+      };
+    }
+  }
+  if (!matches.length && resolution.suggestions.length > 1) {
+    return {
+      result: clarificationResponse(
+        `I found more than one community matching ${
+          cleanEntity(entity)
+        }. Did you mean: ${resolution.suggestions.map(placeLabel).join("; ")}?`,
+        resolution.suggestions,
+      ),
+    };
+  }
   if (!matches.length) {
     return {
       result: groundedEmpty(
@@ -1490,6 +1595,85 @@ async function communityHistory(client: SupabaseClient, entity?: string) {
   );
 }
 
+async function communityLifecycle(
+  client: SupabaseClient,
+  input: Interpretation,
+) {
+  const kind = input.topic === "CLOSED" ? "CLOSED" : "OPENED";
+  if (input.entity) {
+    const resolved = await resolveCommunityRow(client, input.entity, true);
+    if (resolved.result) return resolved.result;
+    const community = resolved.row!;
+    const { data, error } = await client.from("v_community_lifecycle").select(
+      "lifecycle_event_id,community_id,community_code,community_name,event_type_code,effective_date,effective_year,date_precision_code,current_active",
+    ).eq("event_type_code", kind).eq("community_id", idOf(community)).order(
+      "effective_date",
+    ).limit(1);
+    if (error) throw error;
+    const row = data?.[0];
+    if (!row) {
+      return groundedEmpty(
+        `I found no recorded ${
+          kind === "OPENED" ? "opening" : "closure"
+        } lifecycle event for ${nameOf(community)}.`,
+      );
+    }
+    const precision = text(row, "date_precision_code")?.toUpperCase();
+    const date = precision === "YEAR"
+      ? text(row, "effective_year")
+      : text(row, "effective_date")
+      ? formatDate(text(row, "effective_date")!)
+      : text(row, "effective_year");
+    const verb = kind === "OPENED" ? "opening" : "closing";
+    const preposition = precision === "YEAR" ? "in" : "on";
+    return response(
+      `${nameOf(community)} is recorded as ${verb} ${preposition} ${date}.`,
+      [row],
+      [source(
+        lifecycleEvidenceLabel(kind),
+        "community_lifecycle",
+        text(row, "lifecycle_event_id"),
+        date,
+      )],
+      [{ id: idOf(community), type: "community", label: nameOf(community) }],
+      {
+        focus: semanticEntity("community", idOf(community), nameOf(community)),
+      },
+    );
+  }
+  if (!input.year) return noReliableAnswer("Please include a year.");
+  const { data, error } = await client.from("v_community_lifecycle").select(
+    "lifecycle_event_id,community_id,community_code,community_name,event_type_code,effective_date,effective_year,date_precision_code,current_active",
+  ).eq("event_type_code", kind).eq("effective_year", input.year).order(
+    "effective_date",
+  ).order("community_name");
+  if (error) throw error;
+  const rows = data ?? [];
+  const answer = lifecycleAnswer(
+    kind,
+    input.year,
+    rows.map((row) => text(row, "community_name") ?? "Community"),
+  );
+  if (!rows.length) return groundedEmpty(answer);
+  return response(
+    answer,
+    rows,
+    rows.map((row) =>
+      source(
+        lifecycleEvidenceLabel(kind),
+        "community_lifecycle",
+        text(row, "lifecycle_event_id"),
+        text(row, "effective_date"),
+      )
+    ),
+    rows.map((row) => ({
+      id: text(row, "community_id") ?? "",
+      type: "community",
+      label: text(row, "community_name") ?? "Community",
+    })),
+  );
+}
+
 async function communityMovement(
   client: SupabaseClient,
   input: Interpretation,
@@ -1536,6 +1720,102 @@ async function communityMovement(
     ),
     memberEntities(enriched),
     { focus: semanticEntity("community", idOf(community), nameOf(community)) },
+  );
+}
+
+async function formalTransferSearch(
+  client: SupabaseClient,
+  input: Interpretation,
+) {
+  if (input.topic !== "from_community") {
+    return memberFormalTransferSearch(client, input);
+  }
+  if (!input.year) return noReliableAnswer("Please include a year.");
+  const resolved = await resolveCommunityRow(client, input.entity);
+  if (resolved.result) return resolved.result;
+  const community = resolved.row!;
+  const from = `${input.year}-01-01`;
+  const to = `${input.year}-12-31`;
+  const { data, error } = await client.from("v_member_transfers").select(
+    "transfer_id,member_id,religious_id,display_name,from_community_id,from_community_name,to_community_id,to_community_name,effective_date,transfer_type_code,status_code",
+  ).eq("from_community_id", idOf(community)).eq(
+    "status_code",
+    "CONFIRMED",
+  ).gte("effective_date", from).lte("effective_date", to).order(
+    "effective_date",
+  ).order("display_name");
+  if (error) throw error;
+  const rows = data ?? [];
+  const answer = formalTransferAnswer(nameOf(community), input.year, rows);
+  if (!rows.length) return groundedEmpty(answer);
+  return response(
+    answer,
+    rows,
+    rows.map((row) =>
+      source(
+        "Formal transfer",
+        "member_transfer",
+        text(row, "transfer_id"),
+        `${text(row, "from_community_name")} → ${
+          text(row, "to_community_name")
+        } · ${text(row, "effective_date")}`,
+      )
+    ),
+    memberEntities(rows),
+    { focus: semanticEntity("community", idOf(community), nameOf(community)) },
+  );
+}
+
+async function memberFormalTransferSearch(
+  client: SupabaseClient,
+  input: Interpretation,
+) {
+  const resolved = await resolveMember(client, input.entity, input.entityId);
+  if ("result" in resolved) return resolved.result;
+  const member = resolved.member;
+  const { data, error } = await client.from("v_member_transfers").select(
+    "transfer_id,member_id,religious_id,display_name,from_community_id,from_community_name,to_community_id,to_community_name,effective_date,transfer_type_code,status_code",
+  ).eq("member_id", idOf(member)).eq("status_code", "CONFIRMED").lte(
+    "effective_date",
+    new Date().toISOString().slice(0, 10),
+  ).order("effective_date");
+  if (error) throw error;
+  const rows: Row[] = (data ?? []).map((row) => ({ ...row }));
+  if (input.topic === "member_reason" && rows.length) {
+    const ids = rows.map((row) => text(row, "transfer_id")!).filter(Boolean);
+    const reasonResult = await client.from("member_transfers").select(
+      "id,reason",
+    )
+      .in("id", ids);
+    if (reasonResult.error) throw reasonResult.error;
+    const reasons = new Map(
+      (reasonResult.data ?? []).map((row) => [idOf(row), text(row, "reason")]),
+    );
+    for (const row of rows) {
+      row.reason = reasons.get(text(row, "transfer_id") ?? "");
+    }
+  }
+  const answer = memberFormalTransferAnswer(
+    nameOf(member),
+    rows,
+    input.topic === "member_reason",
+  );
+  if (!rows.length) return groundedEmpty(answer);
+  return response(
+    answer,
+    rows,
+    rows.map((row) =>
+      source(
+        "Formal transfer",
+        "member_transfer",
+        text(row, "transfer_id"),
+        `${text(row, "from_community_name")} → ${
+          text(row, "to_community_name")
+        } · ${text(row, "effective_date")}`,
+      )
+    ),
+    [{ id: idOf(member), type: "member", label: nameOf(member) }],
+    { focus: semanticEntity("member", idOf(member), nameOf(member)) },
   );
 }
 
@@ -2425,7 +2705,7 @@ async function ageSearch(
       "date_of_birth",
       "is",
       null,
-    ).order("date_of_birth");
+    ).eq("active", true).order("date_of_birth");
   if (error) throw error;
   const today = new Date();
   const rows = (data ?? []).filter((row) => {
@@ -2433,8 +2713,7 @@ async function ageSearch(
     if (!dob) return false;
     const actualAge = ageOnDate(dob, today);
     if (ageTo != null) {
-      return actualAge >= Math.min(age, ageTo) &&
-        actualAge <= Math.max(age, ageTo);
+      return ageInInclusiveRange(actualAge, age, ageTo);
     }
     return comparison === "below" ? actualAge < age : actualAge > age;
   });
@@ -2499,6 +2778,150 @@ async function ageSearch(
       },
     },
   );
+}
+
+async function birthdayMonthSearch(
+  client: SupabaseClient,
+  month?: number,
+  outputType?: "records" | "count",
+) {
+  if (!month || month < 1 || month > 12) {
+    return noReliableAnswer("Please include a valid birthday month.");
+  }
+  const { data, error } = await client.from("members").select(
+    "id,display_name,date_of_birth,member_status_code",
+  ).eq("active", true).not("date_of_birth", "is", null).order(
+    "date_of_birth",
+  );
+  if (error) throw error;
+  const rows = (data ?? []).filter((row) => {
+    const dob = text(row, "date_of_birth");
+    return dob && birthdayMatchesMonth(dob, month);
+  });
+  const monthName = new Intl.DateTimeFormat("en", {
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2000, month - 1, 1)));
+  if (outputType === "count") {
+    return countResponse(
+      `${rows.length} current member${
+        rows.length === 1 ? " has" : "s have"
+      } a recorded birthday in ${monthName}.`,
+      rows.length,
+      [aggregateSource(
+        `${monthName} birthdays`,
+        "member_birthday_count",
+        rows.length,
+        "matching member",
+      )],
+    );
+  }
+  if (!rows.length) {
+    return groundedEmpty(
+      `No current members have a recorded birthday in ${monthName}.`,
+    );
+  }
+  return response(
+    `${rows.length} current member${
+      rows.length === 1 ? " has" : "s have"
+    } a recorded birthday in ${monthName}:\n• ${
+      rows.map((row) =>
+        `${nameOf(row)} — ${birthdayMonthDay(text(row, "date_of_birth")!)}`
+      ).join("\n• ")
+    }`,
+    rows.map((row) => ({
+      id: idOf(row),
+      display_name: nameOf(row),
+      birthday: birthdayMonthDay(text(row, "date_of_birth")!),
+    })),
+    rows.map((row) =>
+      source(
+        "Birthday",
+        "member_birthday",
+        idOf(row),
+        birthdayMonthDay(text(row, "date_of_birth")!),
+      )
+    ),
+    memberEntities(rows),
+  );
+}
+
+async function vocationAnniversarySearch(
+  client: SupabaseClient,
+  anniversary?: number,
+  targetYear?: number,
+  outputType?: "records" | "count",
+) {
+  if (!anniversary || !targetYear) {
+    return noReliableAnswer(
+      "Please include an anniversary number and target year.",
+    );
+  }
+  const professionYear = professionYearForAnniversary(
+    targetYear,
+    anniversary,
+  );
+  const [eventsResult, members] = await Promise.all([
+    client.from("member_vocation_events").select("*").ilike(
+      "event_type_code",
+      "%FIRST_PROFESSION%",
+    ).gte("event_date", `${professionYear}-01-01`).lte(
+      "event_date",
+      `${professionYear}-12-31`,
+    ),
+    activeMemberLookup(client),
+  ]);
+  if (eventsResult.error) throw eventsResult.error;
+  const unique = new Map<string, Row>();
+  for (const event of eventsResult.data ?? []) {
+    const memberId = text(event, "member_id") ?? "";
+    const member = members.get(memberId);
+    if (member && !unique.has(memberId)) {
+      unique.set(memberId, { ...event, display_name: nameOf(member) });
+    }
+  }
+  const rows = [...unique.values()].sort((a, b) =>
+    nameOf(a).localeCompare(nameOf(b))
+  );
+  const ordinal = ordinalNumber(anniversary);
+  const answer = rows.length
+    ? `${rows.length} current member${
+      rows.length === 1 ? " will" : "s will"
+    } celebrate the ${ordinal} anniversary of first profession in ${targetYear}${
+      outputType === "count" ? "." : `:\n• ${rows.map(nameOf).join("\n• ")}`
+    }`
+    : `No current members are recorded as reaching the ${ordinal} anniversary of first profession in ${targetYear}.`;
+  if (outputType === "count") {
+    return countResponse(answer, rows.length, [aggregateSource(
+      `${ordinal} first-profession anniversaries in ${targetYear}`,
+      "vocation_anniversary_count",
+      rows.length,
+      "matching member",
+    )]);
+  }
+  if (!rows.length) return groundedEmpty(answer);
+  return response(
+    answer,
+    rows,
+    rows.map((row) =>
+      source(
+        "First profession anniversary",
+        "vocation_anniversary",
+        idOf(row),
+        `${ordinal} anniversary · ${targetYear}`,
+      )
+    ),
+    memberEntities(rows),
+  );
+}
+
+function birthdayMonthDay(value: string): string {
+  const [, month, day] = value.slice(0, 10).split("-").map(Number);
+  return new Intl.DateTimeFormat("en", {
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2000, month - 1, day)));
 }
 
 async function memberAgeExtreme(client: SupabaseClient, direction: string) {
@@ -2997,6 +3420,205 @@ async function governanceBodyMembership(
   );
 }
 
+async function governanceDirectory(client: SupabaseClient) {
+  const { data, error } = await client.from("v_governance_body_directory")
+    .select("*").eq("status_code", "ACTIVE").order("display_order").order(
+      "name",
+    );
+  if (error) throw error;
+  const rows = data ?? [];
+  if (!rows.length) {
+    return groundedEmpty(
+      "No governance bodies are available with your current access.",
+    );
+  }
+  return response(
+    `${rows.length} active governance bodies are recorded:\n• ${
+      rows.map(nameOf).join("\n• ")
+    }`,
+    rows,
+    rows.map((row) =>
+      source(
+        "Governance body",
+        "governance_body",
+        text(row, "governance_body_id"),
+        nameOf(row),
+      )
+    ),
+    rows.map((row) => ({
+      id: text(row, "governance_body_id"),
+      type: "governance_body",
+      label: nameOf(row),
+    })),
+    {
+      entitySet: {
+        type: "governance_body",
+        entities: rows.map((row) =>
+          semanticEntity(
+            "governance_body",
+            text(row, "governance_body_id") ?? "",
+            nameOf(row),
+          )
+        ),
+      },
+    },
+  );
+}
+
+async function resolveGovernanceBodyForQuery(
+  client: SupabaseClient,
+  input: Interpretation,
+) {
+  const { data, error } = await client.from("v_governance_body_directory")
+    .select("*").order("display_order").order("name");
+  if (error) throw error;
+  const query = cleanEntity(input.entity);
+  const resolution = resolveGovernanceBody(data ?? [], input.entityId ?? query);
+  if (resolution.kind === "missing") {
+    return {
+      result: groundedEmpty(
+        `I couldn't find a governance body matching '${query}'.`,
+      ),
+    };
+  }
+  if (resolution.kind === "ambiguous") {
+    return {
+      result: clarificationResponse(
+        `I found more than one matching governance body. Did you mean: ${
+          resolution.rows.map(nameOf).join("; ")
+        }?`,
+        resolution.rows,
+      ),
+    };
+  }
+  return { body: resolution.row };
+}
+
+function governanceBodyContext(body: Row): SemanticContext {
+  const entity = semanticEntity(
+    "governance_body",
+    text(body, "governance_body_id") ?? "",
+    nameOf(body),
+  );
+  return { focus: entity, lastAnswer: entity };
+}
+
+async function governanceBodyProfile(
+  client: SupabaseClient,
+  input: Interpretation,
+) {
+  const resolved = await resolveGovernanceBodyForQuery(client, input);
+  if ("result" in resolved) return resolved.result;
+  const body = resolved.body;
+  const count = Number(body.current_member_count ?? 0);
+  const facts = [
+    `${nameOf(body)} is an ${
+      String(body.status_code ?? "active").toLowerCase()
+    } governance body with ${count} current member${count === 1 ? "" : "s"}.`,
+    text(body, "chair_display_name")
+      ? `Chair: ${text(body, "chair_display_name")}`
+      : "No chair is currently recorded.",
+    text(body, "purpose") ? `Purpose: ${text(body, "purpose")}` : undefined,
+  ].filter(Boolean).join("\n");
+  return response(facts, [body], [
+    source(
+      "Governance body",
+      "governance_body",
+      text(body, "governance_body_id"),
+      facts,
+    ),
+  ], [{
+    id: text(body, "governance_body_id"),
+    type: "governance_body",
+    label: nameOf(body),
+  }], governanceBodyContext(body));
+}
+
+async function currentGovernanceMembers(
+  client: SupabaseClient,
+  bodyId: string,
+) {
+  const { data, error } = await client.from("v_governance_body_current_members")
+    .select("*").eq("governance_body_id", bodyId);
+  if (error) throw error;
+  return orderGovernanceMembers(data ?? []);
+}
+
+async function governanceBodyMembers(
+  client: SupabaseClient,
+  input: Interpretation,
+) {
+  const resolved = await resolveGovernanceBodyForQuery(client, input);
+  if ("result" in resolved) return resolved.result;
+  const body = resolved.body;
+  const rows = await currentGovernanceMembers(
+    client,
+    text(body, "governance_body_id") ?? "",
+  );
+  if (!rows.length) {
+    return groundedEmpty(
+      `No current members are recorded for ${nameOf(body)}.`,
+    );
+  }
+  return response(
+    `${nameOf(body)} has ${rows.length} current member${
+      rows.length === 1 ? "" : "s"
+    }:\n• ${
+      rows.map((row) =>
+        `${nameOf(row)} — ${
+          text(row, "role_title") ?? label(text(row, "role_code") ?? "member")
+        }`
+      ).join("\n• ")
+    }`,
+    rows,
+    rows.map((row) =>
+      source(
+        "Governance membership",
+        "governance_membership",
+        text(row, "membership_id"),
+        `${nameOf(row)} · ${
+          text(row, "role_title") ?? label(text(row, "role_code") ?? "member")
+        }`,
+      )
+    ),
+    memberEntities(rows),
+    governanceBodyContext(body),
+  );
+}
+
+async function governanceBodyLeader(
+  client: SupabaseClient,
+  input: Interpretation,
+) {
+  const resolved = await resolveGovernanceBodyForQuery(client, input);
+  if ("result" in resolved) return resolved.result;
+  const body = resolved.body;
+  const leaders = governanceLeaders(
+    await currentGovernanceMembers(
+      client,
+      text(body, "governance_body_id") ?? "",
+    ),
+  );
+  if (!leaders.length) {
+    return groundedEmpty(`No chair is currently recorded for ${nameOf(body)}.`);
+  }
+  const leader = leaders[0];
+  const role = text(leader, "role_title") ??
+    label(text(leader, "role_code") ?? "chair");
+  return response(
+    `${nameOf(leader)} is the current ${role} of the ${nameOf(body)}.`,
+    [leader],
+    [source(
+      "Governance leadership",
+      "governance_leadership",
+      text(leader, "membership_id"),
+      `${nameOf(leader)} · ${role}`,
+    )],
+    memberEntities([leader]),
+    governanceBodyContext(body),
+  );
+}
+
 function officeCode(row: Row, officeTypes: Map<string, Row>): string {
   const officeType = officeTypes.get(text(row, "office_type_id") ?? "");
   return text(row, "office_type_code", "office_code") ??
@@ -3341,9 +3963,66 @@ async function assignmentSearch(
     if (input.year && !overlapsYear(row, input.year)) return false;
     return true;
   });
+  let scopedRows = rows;
+  if (leadershipOnly && input.topic === "earliest") {
+    scopedRows = [...rows].sort((a, b) =>
+      (text(a, "from_date") ?? "9999-12-31").localeCompare(
+        text(b, "from_date") ?? "9999-12-31",
+      )
+    ).slice(0, 1);
+  } else if (leadershipOnly && input.topic === "previous") {
+    scopedRows = rows.filter((row) => !activeOnDate(row, new Date())).sort(
+      (a, b) =>
+        (text(b, "to_date", "from_date") ?? "").localeCompare(
+          text(a, "to_date", "from_date") ?? "",
+        ),
+    ).slice(0, 1);
+  } else if (leadershipOnly && input.topic === "past") {
+    scopedRows = rows.filter((row) => !activeOnDate(row, new Date()));
+  }
   const resultRows = (input.outputType === "count" || input.year)
-    ? uniqueMemberRows(rows)
-    : rows;
+    ? uniqueMemberRows(scopedRows)
+    : scopedRows;
+  const targetName = targetMatches[0]
+    ? placeLabel(targetMatches[0])
+    : cleanEntity(input.entity);
+  if (kind === "ministry" && leadershipOnly && input.topic === "earliest") {
+    if (!resultRows.length) {
+      return groundedEmpty(
+        `I found no historical ${
+          label(input.role ?? "leadership")
+        } appointment recorded for ${targetName}.`,
+      );
+    }
+    const members = await memberLookup(client);
+    const row = {
+      ...resultRows[0],
+      display_name: members.get(text(resultRows[0], "member_id") ?? "")
+        ?.display_name ?? nameOf(resultRows[0]),
+    };
+    return response(
+      `Communio's earliest recorded ${
+        label(input.role ?? "leader")
+      } for ${targetName} was ${nameOf(row)}, serving from ${
+        text(row, "from_date")
+          ? formatDate(text(row, "from_date")!)
+          : "an unrecorded start date"
+      }.`,
+      [row],
+      [source(
+        "Ministry leadership assignment",
+        "ministry_assignment",
+        idOf(row),
+        naturalDateRange(row),
+      )],
+      memberEntities([row]),
+      targetMatches[0]
+        ? {
+          focus: semanticEntity("ministry", idOf(targetMatches[0]), targetName),
+        }
+        : undefined,
+    );
+  }
   if (!resultRows.length && input.year) {
     return groundedEmpty(
       historicalAssignmentEmptyMessage(
@@ -3413,6 +4092,22 @@ async function assignmentSearch(
     return countResponse(
       `${communityName} currently has ${resultRows.length} recorded member${
         resultRows.length === 1 ? "" : "s"
+      }.`,
+      resultRows.length,
+      [],
+      focus ? { focus } : undefined,
+    );
+  }
+  if (kind === "ministry" && input.outputType === "count" && !leadershipOnly) {
+    const members = await memberLookup(client);
+    const names = resultRows.map((row) =>
+      members.get(text(row, "member_id") ?? "")?.display_name ?? nameOf(row)
+    );
+    return countResponse(
+      `${resultRows.length} current member${
+        resultRows.length === 1 ? " is" : "s are"
+      } assigned to ${targetName}${
+        names.length ? `: ${names.join(", ")}` : ""
       }.`,
       resultRows.length,
       [],
@@ -3886,6 +4581,57 @@ async function personSearch(client: SupabaseClient, entity?: string) {
     rows,
     rows.map((row) => source("Religious record", "member", idOf(row))),
     memberEntities(rows),
+  );
+}
+
+async function memberLanguages(
+  client: SupabaseClient,
+  input: Interpretation,
+) {
+  const resolved = await resolveMember(client, input.entity, input.entityId);
+  if ("result" in resolved) return resolved.result;
+  const member = resolved.member;
+  let query = client.from("v_member_languages").select(
+    "member_id,religious_id,display_name,language_name,language_code,proficiency_level_code,can_speak,can_read,can_write,is_primary,is_native",
+  ).eq("member_id", idOf(member));
+  if (input.topic === "spoken") query = query.eq("can_speak", true);
+  const { data, error } = await query.order("is_primary", {
+    ascending: false,
+  }).order("language_name");
+  if (error) throw error;
+  const rows = data ?? [];
+  if (!rows.length) {
+    return groundedEmpty(
+      `I found no recorded language information for ${nameOf(member)}.`,
+    );
+  }
+  const detail = (row: Row) =>
+    [
+      text(row, "proficiency_level_code")
+        ? label(text(row, "proficiency_level_code")!)
+        : undefined,
+      row.can_speak === true ? "Speak" : undefined,
+      row.can_read === true ? "Read" : undefined,
+      row.can_write === true ? "Write" : undefined,
+    ].filter(Boolean).join(", ");
+  return response(
+    `${nameOf(member)} has ${rows.length} recorded language${
+      rows.length === 1 ? "" : "s"
+    }:\n• ${
+      rows.map((row) =>
+        `${text(row, "language_name")}${detail(row) ? ` — ${detail(row)}` : ""}`
+      ).join("\n• ")
+    }`,
+    rows,
+    rows.map((row) =>
+      source(
+        "Member language",
+        "member_language",
+        idOf(member),
+        text(row, "language_name"),
+      )
+    ),
+    [{ id: idOf(member), type: "member", label: nameOf(member) }],
   );
 }
 

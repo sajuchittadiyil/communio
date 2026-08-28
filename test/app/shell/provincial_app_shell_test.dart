@@ -14,6 +14,9 @@ import 'package:communio/features/ask_communio/data/ask_communio_service.dart';
 import 'package:communio/features/ask_communio/models/ask_communio_models.dart';
 import 'package:communio/features/dashboard/data/dashboard_repository.dart';
 import 'package:communio/features/dashboard/models/dashboard_models.dart';
+import 'package:communio/features/governance/data/governance_repository.dart';
+import 'package:communio/features/governance/models/governance_models.dart';
+import 'package:communio/features/governance/screens/governance_screens.dart';
 import 'package:communio/features/organization_identity/data/organization_identity_repository.dart';
 import 'package:communio/features/organization_identity/models/organization_identity_models.dart';
 import 'package:communio/features/province_modules/data/province_repository.dart';
@@ -54,6 +57,21 @@ void main() {
     final controller = await _pumpShell(tester);
 
     expect(find.byType(ProvincialNavigationRail), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    controller.dispose();
+  });
+
+  testWidgets('Provincial Governance navigation opens governance bodies', (
+    tester,
+  ) async {
+    await _setSurface(tester, const Size(1600, 900));
+    final controller = await _pumpShell(tester);
+
+    await tester.tap(find.text('Governance').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GovernanceDirectoryScreen), findsOneWidget);
+    expect(find.text('No governance bodies recorded'), findsOneWidget);
     expect(tester.takeException(), isNull);
     controller.dispose();
   });
@@ -396,6 +414,7 @@ Future<AuthenticationController> _pumpShell(
           dashboardRepository:
               dashboardRepository ?? const _DashboardRepository(),
           provinceRepository: provinceRepository ?? const _ProvinceRepository(),
+          governanceRepository: const _GovernanceRepository(),
           organizationIdentityRepository: const _OrganizationRepository(),
           askCommunioService: const _AskCommunioService(),
         ),
@@ -592,6 +611,13 @@ class _ProvinceRepository implements ProvinceRepository {
 
   @override
   Future<List<CalendarEntry>> fetchCalendarEntries() async => const [];
+}
+
+class _GovernanceRepository implements GovernanceRepository {
+  const _GovernanceRepository();
+
+  @override
+  Future<List<GovernanceBody>> fetchBodies() async => const [];
 }
 
 class _ProfileRepository implements ReligiousProfileRepository {

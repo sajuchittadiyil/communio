@@ -116,6 +116,8 @@ class _ProfileContent extends StatelessWidget {
           SizedBox(height: gap),
           _QualificationsCard(profile: profile),
           SizedBox(height: gap),
+          _LanguagesCard(profile: profile),
+          SizedBox(height: gap),
           _ResponsibilitiesCard(profile: profile),
           if (_hasSupplementary(profile)) ...[
             SizedBox(height: gap),
@@ -145,6 +147,8 @@ class _ProfileContent extends StatelessWidget {
                   _ContactCard(profile: profile),
                   SizedBox(height: gap),
                   _QualificationsCard(profile: profile),
+                  SizedBox(height: gap),
+                  _LanguagesCard(profile: profile),
                   SizedBox(height: gap),
                   _ResponsibilitiesCard(profile: profile),
                   if (profile.sections.vocationEvents.isNotEmpty) ...[
@@ -769,6 +773,46 @@ class _QualificationRow extends StatelessWidget {
       color: AppColors.purple,
     );
   }
+}
+
+class _LanguagesCard extends StatelessWidget {
+  const _LanguagesCard({required this.profile});
+
+  final ReligiousProfile profile;
+
+  @override
+  Widget build(BuildContext context) => _SectionCard(
+    key: const Key('profile-languages'),
+    title: 'Languages',
+    icon: Icons.translate_rounded,
+    accent: AppColors.secondary,
+    child: _body(
+      false,
+      profile.sections.languages.isEmpty,
+      'No language information recorded',
+      Column(
+        children: [
+          for (
+            var index = 0;
+            index < profile.sections.languages.length;
+            index++
+          ) ...[
+            _CompactRow(
+              icon: Icons.record_voice_over_outlined,
+              title: profile.sections.languages[index].name,
+              subtitle:
+                  profile.sections.languages[index].capabilityLabel.isEmpty
+                  ? 'Recorded language'
+                  : profile.sections.languages[index].capabilityLabel,
+              color: AppColors.secondary,
+            ),
+            if (index < profile.sections.languages.length - 1)
+              const Divider(height: 18),
+          ],
+        ],
+      ),
+    ),
+  );
 }
 
 class _OriginCard extends StatelessWidget {
@@ -1640,6 +1684,10 @@ String? _dateRange(DateTime? from, DateTime? to) {
   MemberTimelineCategory.vocation => (
     label: 'Vocation',
     color: AppColors.purple,
+  ),
+  MemberTimelineCategory.transfer => (
+    label: 'Transfer',
+    color: AppColors.warning,
   ),
   MemberTimelineCategory.community => (
     label: 'Community',
