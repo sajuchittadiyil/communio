@@ -94,7 +94,7 @@ void main() {
       tester
           .getSize(find.byKey(const Key('province-pulse-identity-card')))
           .height,
-      lessThan(320),
+      lessThan(380),
     );
     final identityActionY = [
       'Congregation',

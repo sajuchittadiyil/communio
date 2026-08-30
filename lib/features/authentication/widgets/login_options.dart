@@ -22,6 +22,56 @@ class LoginOptions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final useStackedLayout =
+        compact && MediaQuery.textScalerOf(context).scale(1) > 1.2;
+    final rememberOption = Row(
+      children: [
+        Checkbox(
+          value: rememberMe,
+          onChanged: enabled
+              ? (value) => onRememberChanged(value ?? false)
+              : null,
+          activeColor: AppColors.secondary,
+          materialTapTargetSize: compact
+              ? MaterialTapTargetSize.shrinkWrap
+              : MaterialTapTargetSize.padded,
+          visualDensity: compact ? VisualDensity.compact : null,
+        ),
+        Expanded(
+          child: Text(
+            'Remember me',
+            style: AppTypography.responsive(context).bodySmall,
+          ),
+        ),
+      ],
+    );
+    final forgotPassword = TextButton(
+      onPressed: enabled ? onForgotPassword : null,
+      style: compact
+          ? TextButton.styleFrom(
+              minimumSize: Size.zero,
+              padding: EdgeInsets.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            )
+          : null,
+      child: Text(
+        'Forgot password?',
+        style: AppTypography.responsive(
+          context,
+        ).labelMedium.copyWith(color: AppColors.secondary),
+      ),
+    );
+
+    if (useStackedLayout) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          rememberOption,
+          Align(alignment: Alignment.centerRight, child: forgotPassword),
+        ],
+      );
+    }
+
     return Row(
       children: [
         Checkbox(
@@ -41,22 +91,7 @@ class LoginOptions extends StatelessWidget {
             style: AppTypography.responsive(context).bodySmall,
           ),
         ),
-        TextButton(
-          onPressed: enabled ? onForgotPassword : null,
-          style: compact
-              ? TextButton.styleFrom(
-                  minimumSize: Size.zero,
-                  padding: EdgeInsets.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                )
-              : null,
-          child: Text(
-            'Forgot password?',
-            style: AppTypography.responsive(
-              context,
-            ).labelMedium.copyWith(color: AppColors.secondary),
-          ),
-        ),
+        forgotPassword,
       ],
     );
   }

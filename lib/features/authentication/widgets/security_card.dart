@@ -66,7 +66,7 @@ class SecurityCard extends StatelessWidget {
                   Text(
                     mobileStyle
                         ? 'We follow best practices to protect your information.'
-                        : 'Your data is protected with enterprise-grade security and encryption to ensure complete confidentiality.',
+                        : 'Authenticated, role-aware access helps protect Communio records.',
                     style: AppTypography.responsive(
                       context,
                     ).bodySmall.copyWith(color: AppColors.textSecondary),

@@ -123,7 +123,10 @@ class _ProvincialAppShellState extends State<ProvincialAppShell> {
           AppEnvironment.hasSupabaseConfiguration
               ? SupabaseMemberSafeProvinceRepository(
                   Supabase.instance.client,
-                  managedCommunityOnly: widget.access.isCommunitySuperior,
+                  // A Superior keeps the Province-wide member-safe browse
+                  // scope. Managed-community reads use their dedicated
+                  // repositories and RPCs instead of narrowing this source.
+                  managedCommunityOnly: false,
                 )
               : _provinceRepository,
         )
@@ -157,7 +160,9 @@ class _ProvincialAppShellState extends State<ProvincialAppShell> {
                   AppEnvironment.hasSupabaseConfiguration
               ? SupabaseOtherMemberProfileRepository(
                   Supabase.instance.client,
-                  rpcName: 'get_community_superior_resident_profile_safe',
+                  rpcName:
+                      'get_community_superior_resident_profile_browse_safe',
+                  includeManagedCommunityFamily: true,
                 )
               : null,
           accessRole: widget.access.role,
@@ -216,7 +221,6 @@ class _ProvincialAppShellState extends State<ProvincialAppShell> {
               mobile: true,
               mobileBranded:
                   selectedItem.destination == AppDestination.dashboard,
-              onNavigate: _select,
               onSignOut: authentication.signOut,
               onSearch: () => _showSearch(context),
             ),
@@ -285,7 +289,6 @@ class _ProvincialAppShellState extends State<ProvincialAppShell> {
                     ShellTopBar(
                       title: shellTitle,
                       displayName: displayName,
-                      onNavigate: _select,
                       onSignOut: authentication.signOut,
                       onSearch: () => _showSearch(context),
                     ),

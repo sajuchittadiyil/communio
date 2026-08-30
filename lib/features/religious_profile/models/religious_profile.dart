@@ -73,6 +73,7 @@ class ReligiousProfile {
 
 class MemberOriginDetails {
   const MemberOriginDetails({
+    this.birthplace,
     this.nativePlace,
     this.homeParish,
     this.diocese,
@@ -81,6 +82,7 @@ class MemberOriginDetails {
     this.country,
   });
 
+  final String? birthplace;
   final String? nativePlace;
   final String? homeParish;
   final String? diocese;
@@ -89,6 +91,7 @@ class MemberOriginDetails {
   final String? country;
 
   bool get isEmpty =>
+      birthplace == null &&
       nativePlace == null &&
       homeParish == null &&
       diocese == null &&

@@ -4,6 +4,7 @@ import '../../province_modules/data/province_repository.dart';
 import '../../province_modules/data/storage_image_url.dart';
 import '../../province_modules/models/province_models.dart';
 import '../../religious_profile/data/religious_profile_repository.dart';
+import '../../religious_profile/data/family_contact_mapper.dart';
 import '../../religious_profile/models/religious_profile.dart';
 import '../../organization_identity/data/organization_identity_repository.dart';
 import '../../organization_identity/models/organization_identity_models.dart';
@@ -312,6 +313,7 @@ class MemberCalendarRepository implements ProvinceRepository {
     type: community.type,
     recordStatus: community.recordStatus,
     communityCategory: community.communityCategory,
+    description: community.description,
     patronSaintName: community.patronSaintName,
     feastMonth: community.feastMonth,
     feastDay: community.feastDay,
@@ -346,14 +348,12 @@ class SupabaseMemberSafeProvinceRepository implements ProvinceRepository {
   Future<List<CommunityRecord>> fetchCommunities() async {
     try {
       final results = await Future.wait([
-        _client
-            .from(
-              managedCommunityOnly
-                  ? 'v_community_superior_community_safe'
-                  : 'v_member_communities_safe',
-            )
-            .select()
-            .order('name'),
+        managedCommunityOnly
+            ? _client
+                  .from('v_community_superior_community_safe')
+                  .select()
+                  .order('name')
+            : _client.rpc('get_member_communities_profile_safe'),
         _client
             .from(
               managedCommunityOnly
@@ -376,10 +376,10 @@ class SupabaseMemberSafeProvinceRepository implements ProvinceRepository {
             .order('event_type_code'),
       ]);
       return mapCommunities(
-        List<Map<String, dynamic>>.from(results[0]),
-        residentRows: List<Map<String, dynamic>>.from(results[1]),
-        ministryRows: List<Map<String, dynamic>>.from(results[2]),
-        lifecycleRows: List<Map<String, dynamic>>.from(results[3]),
+        List<Map<String, dynamic>>.from(results[0] as List),
+        residentRows: List<Map<String, dynamic>>.from(results[1] as List),
+        ministryRows: List<Map<String, dynamic>>.from(results[2] as List),
+        lifecycleRows: List<Map<String, dynamic>>.from(results[3] as List),
         publicUrl: _publicCoverUrl,
       );
     } catch (error, stackTrace) {
@@ -427,6 +427,7 @@ class SupabaseMemberSafeProvinceRepository implements ProvinceRepository {
           name: row['name']?.toString() ?? 'Community',
           type: row['community_type']?.toString(),
           communityCategory: row['community_category']?.toString(),
+          description: row['description']?.toString(),
           recordStatus: row['active'] == false ? 'Inactive' : 'Active',
           establishedYear: opened?.year,
           lifecycleEvents: lifecycleRows
@@ -501,6 +502,18 @@ class SupabaseMemberSafeProvinceRepository implements ProvinceRepository {
           residents: residents,
           ministries: ministries,
           ministryRecords: ministryRecords,
+          phone: row['phone']?.toString(),
+          email: row['email']?.toString(),
+          patronSaintName: row['patron_saint_name']?.toString(),
+          feastDay: int.tryParse(row['feast_day']?.toString() ?? ''),
+          feastMonth: int.tryParse(row['feast_month']?.toString() ?? ''),
+          motto: row['motto']?.toString(),
+          missionStatement: row['mission_statement']?.toString(),
+          visionStatement: row['vision_statement']?.toString(),
+          apostolicFocus: _safeStringValues(row['apostolic_focus']),
+          communityValues: _safeStringValues(row['community_values']),
+          foundingStory: row['founding_story']?.toString(),
+          historySummary: row['history_summary']?.toString(),
         );
       })
       .toList(growable: false);
@@ -508,16 +521,24 @@ class SupabaseMemberSafeProvinceRepository implements ProvinceRepository {
   @override
   Future<List<MinistryRecord>> fetchMinistries() async {
     try {
-      final rows = await _client
-          .from('v_member_ministries_safe')
-          .select()
-          .order('ministry_name');
+      final rows = await _client.rpc('get_member_ministries_profile_safe');
       return List<Map<String, dynamic>>.from(rows)
           .map((row) => _mapMinistry(row, publicUrl: _publicCoverUrl))
           .toList(growable: false);
     } catch (error, stackTrace) {
-      // ignore: avoid_print
-      print('MEMBER ministry directory query failed: $error\n$stackTrace');
+      if (kDebugMode) {
+        final diagnostic = switch (error) {
+          PostgrestException e =>
+            'type=PostgrestException code=${e.code} '
+                'message=${e.message} details=${e.details} hint=${e.hint}',
+          _ => 'type=${error.runtimeType} message=$error',
+        };
+        debugPrint(
+          'MemberSafeProvinceRepository.fetchMinistries '
+          'rpc=get_member_ministries_safe $diagnostic',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
       throw const ProvinceDataException();
     }
   }
@@ -624,6 +645,14 @@ class SupabaseMemberSafeProvinceRepository implements ProvinceRepository {
       throw const ProvinceDataException();
 }
 
+List<String> _safeStringValues(dynamic value) => value is List
+    ? value
+          .map((item) => item?.toString().trim())
+          .whereType<String>()
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false)
+    : const [];
+
 class MemberSafeReligiousProfileRepository
     implements ReligiousProfileRepository {
   const MemberSafeReligiousProfileRepository({
@@ -700,10 +729,12 @@ class SupabaseOtherMemberProfileRepository
     implements ReligiousProfileRepository {
   const SupabaseOtherMemberProfileRepository(
     this._client, {
-    this.rpcName = 'get_other_member_profile_safe',
+    this.rpcName = 'get_other_member_profile_browse_safe',
+    this.includeManagedCommunityFamily = false,
   });
   final SupabaseClient _client;
   final String rpcName;
+  final bool includeManagedCommunityFamily;
 
   @override
   Future<ReligiousProfile> fetchProfile(String memberId) async {
@@ -737,9 +768,15 @@ class SupabaseOtherMemberProfileRepository
         );
       }
       final row = Map<String, dynamic>.from(raw);
-      row['languages'] = results[1];
+      if ((results[1] as List).isNotEmpty || row['languages'] == null) {
+        row['languages'] = results[1];
+      }
       row['transfers'] = results[2];
-      return mapProfile(row, memberId: memberId);
+      return mapProfile(
+        row,
+        memberId: memberId,
+        includeFamily: includeManagedCommunityFamily,
+      );
     } on ReligiousProfileException {
       rethrow;
     } on AuthException catch (error) {
@@ -770,19 +807,27 @@ class SupabaseOtherMemberProfileRepository
   static ReligiousProfile mapProfile(
     Map<String, dynamic> row, {
     required String memberId,
+    bool includeFamily = false,
   }) {
     if (_text(row['member_id']) != memberId) {
       throw const ReligiousProfileException(
         ReligiousProfileFailureKind.notFound,
       );
     }
-    final address = [
-      row['address'],
-      row['city'],
-      row['district'],
-      row['state'],
-      row['country'],
-    ].map(_text).whereType<String>().toSet().join(', ');
+    final origin = MemberOriginDetails(
+      birthplace: _text(row['birthplace']),
+      nativePlace:
+          _text(row['native_place']) ??
+          _text(row['place_of_origin']) ??
+          _text(row['home_town']) ??
+          _text(row['native_city']) ??
+          _text(row['city']),
+      homeParish: _text(row['home_parish']) ?? _text(row['native_parish']),
+      diocese: _text(row['diocese']) ?? _text(row['native_diocese']),
+      district: _text(row['district']),
+      state: _text(row['state']),
+      country: _text(row['country']),
+    );
     return ReligiousProfile(
       memberId: memberId,
       religiousId: _text(row['religious_id']) ?? '',
@@ -807,12 +852,7 @@ class SupabaseOtherMemberProfileRepository
       ministry: _text(row['ministry_name']),
       ministryRole: _label(_text(row['ministry_responsibility_code'])),
       ministryFromDate: _date(row['ministry_from_date']),
-      origin: MemberOriginDetails(
-        nativePlace: _text(row['city']),
-        district: _text(row['district']),
-        state: _text(row['state']),
-        country: _text(row['country']),
-      ),
+      origin: origin.isEmpty ? null : origin,
       sections: ReligiousProfileSections(
         contacts: [
           if (_text(row['mobile']) case final value?)
@@ -821,7 +861,6 @@ class SupabaseOtherMemberProfileRepository
             LabeledValue('WhatsApp', value),
           if (_text(row['official_email']) case final value?)
             LabeledValue('Official Email', value),
-          if (address.isNotEmpty) LabeledValue('Postal Address', address),
         ],
         vocationEvents: _rows(row['vocation_events'])
             .map(
@@ -875,6 +914,24 @@ class SupabaseOtherMemberProfileRepository
               ),
             )
             .toList(growable: false),
+        homeContacts: includeFamily
+            ? _rows(row['home_contacts'])
+                  .expand(
+                    (item) => [
+                      if (_text(item['phone']) case final value?)
+                        LabeledValue('Home Phone', value),
+                      if (_text(item['email']) case final value?)
+                        LabeledValue('Home Email', value),
+                    ],
+                  )
+                  .toList(growable: false)
+            : const [],
+        family: includeFamily
+            ? FamilyContactMapper.fromRows([
+                ..._rows(row['home_contacts']),
+                ..._rows(row['family']),
+              ])
+            : const [],
       ),
     );
   }

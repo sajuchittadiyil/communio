@@ -74,6 +74,7 @@ class CommunityRecord {
     this.type,
     this.recordStatus,
     this.communityCategory,
+    this.description,
     this.patronSaintName,
     this.feastMonth,
     this.feastDay,
@@ -109,6 +110,7 @@ class CommunityRecord {
 
   // Structured Community Profile identity.
   final String? communityCategory;
+  final String? description;
   final String? patronSaintName;
   final int? feastMonth;
   final int? feastDay;

@@ -13,9 +13,14 @@ import 'auth_text_field.dart';
 import 'login_options.dart';
 
 class LoginCard extends StatefulWidget {
-  const LoginCard({this.compactMobile = false, super.key});
+  const LoginCard({
+    this.compactMobile = false,
+    this.compactDesktop = false,
+    super.key,
+  });
 
   final bool compactMobile;
+  final bool compactDesktop;
 
   @override
   State<LoginCard> createState() => _LoginCardState();
@@ -78,12 +83,6 @@ class _LoginCardState extends State<LoginCard> {
     );
   }
 
-  void _showUnavailableMessage(String provider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$provider sign-in will be available soon.')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final authentication = AuthenticationScope.of(context);
@@ -111,10 +110,14 @@ class _LoginCardState extends State<LoginCard> {
               ? AppSpacing.md
               : isMobile
               ? AppSpacing.xl
+              : widget.compactDesktop
+              ? AppSpacing.xl
               : AppSpacing.huge,
         ),
         constraints: BoxConstraints(
-          minHeight: isMobile ? AppSpacing.none : AppSpacing.mega * 8,
+          minHeight: isMobile || widget.compactDesktop
+              ? AppSpacing.none
+              : AppSpacing.mega * 8,
         ),
         decoration: BoxDecoration(
           color: AppColors.surface.withValues(alpha: 0.95),
@@ -146,7 +149,7 @@ class _LoginCardState extends State<LoginCard> {
                   'Welcome Back!',
                   textAlign: TextAlign.center,
                   style:
-                      (isCompactMobile
+                      (isCompactMobile || widget.compactDesktop
                               ? AppTypography.responsive(context).headlineLarge
                               : AppTypography.responsive(context).displayMedium)
                           .copyWith(color: AppColors.primary),
@@ -162,11 +165,13 @@ class _LoginCardState extends State<LoginCard> {
                   ).titleSmall.copyWith(color: AppColors.textSecondary),
                 ),
                 SizedBox(
-                  height: isCompactMobile ? AppSpacing.sm : AppSpacing.xxl,
+                  height: isCompactMobile || widget.compactDesktop
+                      ? AppSpacing.md
+                      : AppSpacing.xxl,
                 ),
                 AuthTextField(
                   controller: _emailController,
-                  hintText: 'Email or Username',
+                  hintText: 'Email address',
                   keyboardType: TextInputType.emailAddress,
                   autofillHints: const [
                     AutofillHints.username,
@@ -174,13 +179,16 @@ class _LoginCardState extends State<LoginCard> {
                   ],
                   prefixIcon: Icons.mail_outline_rounded,
                   enabled: !isLoading,
-                  verticalContentPadding: isCompactMobile
+                  verticalContentPadding:
+                      isCompactMobile || widget.compactDesktop
                       ? AppSpacing.md
                       : AppSpacing.xl,
                   validator: _validateEmail,
                 ),
                 SizedBox(
-                  height: isCompactMobile ? AppSpacing.sm : AppSpacing.lg,
+                  height: isCompactMobile || widget.compactDesktop
+                      ? AppSpacing.sm
+                      : AppSpacing.lg,
                 ),
                 AuthTextField(
                   controller: _passwordController,
@@ -189,7 +197,8 @@ class _LoginCardState extends State<LoginCard> {
                   autofillHints: const [AutofillHints.password],
                   prefixIcon: Icons.lock_outline_rounded,
                   enabled: !isLoading,
-                  verticalContentPadding: isCompactMobile
+                  verticalContentPadding:
+                      isCompactMobile || widget.compactDesktop
                       ? AppSpacing.md
                       : AppSpacing.xl,
                   validator: _validatePassword,
@@ -229,13 +238,6 @@ class _LoginCardState extends State<LoginCard> {
                   icon: Icons.arrow_forward_rounded,
                   isLoading: isLoading,
                   onPressed: _canSubmit && !isLoading ? _continueSignIn : null,
-                ),
-                SizedBox(
-                  height: isCompactMobile ? AppSpacing.sm : AppSpacing.xl,
-                ),
-                AuthActionButton.google(
-                  enabled: !isLoading,
-                  onPressed: () => _showUnavailableMessage('Google'),
                 ),
               ],
             ),

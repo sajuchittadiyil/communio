@@ -825,6 +825,11 @@ class _OriginCard extends StatelessWidget {
     final origin = profile.origin!;
     final values = <({String label, String? value, IconData icon})>[
       (
+        label: 'Birthplace',
+        value: origin.birthplace,
+        icon: Icons.location_on_outlined,
+      ),
+      (
         label: 'Native Place',
         value: origin.nativePlace,
         icon: Icons.place_outlined,

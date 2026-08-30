@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../religious_profile/data/religious_profile_repository.dart';
+import '../../religious_profile/data/family_contact_mapper.dart';
 import '../../religious_profile/models/religious_profile.dart';
 import '../../demo_persona/data/demo_persona_presenter.dart';
 
@@ -44,6 +45,7 @@ class SupabaseMemberSelfProfileRepository
               .lte('effective_date', DateTime.now().toIso8601String())
               .order('effective_date', ascending: false),
         ),
+        Future<dynamic>.value(_client.rpc('get_member_self_origin_safe')),
       ]);
       final raw = results[0];
       if (raw is! Map) {
@@ -54,6 +56,12 @@ class SupabaseMemberSelfProfileRepository
       final row = Map<String, dynamic>.from(raw);
       row['languages'] = results[1];
       row['transfers'] = results[2];
+      final home = results[3];
+      row['native_details'] = home;
+      if (home is Map) {
+        row['home_contacts'] = home['home_contacts'];
+        row['family'] = home['family'];
+      }
       if (_text(row['member_id']) != expectedMemberId) {
         throw const ReligiousProfileException(
           ReligiousProfileFailureKind.notFound,
@@ -119,6 +127,7 @@ class SupabaseMemberSelfProfileRepository
       ministry: _text(row['ministry_name']),
       ministryRole: _label(_text(row['ministry_responsibility_code'])),
       ministryFromDate: _date(row['ministry_from_date']),
+      origin: _origin(row['native_details']),
       sections: ReligiousProfileSections(
         contacts: [
           if (_text(row['mobile']) case final value?)
@@ -160,6 +169,11 @@ class SupabaseMemberSelfProfileRepository
         ministryAssignments: _rows(
           row['ministry_assignments'],
         ).map((item) => _assignment(item, 'Ministry')).toList(growable: false),
+        homeContacts: _homeContacts(_rows(row['home_contacts'])),
+        family: FamilyContactMapper.fromRows([
+          ..._rows(row['home_contacts']),
+          ..._rows(row['family']),
+        ]),
       ),
     );
   }
@@ -196,6 +210,41 @@ class SupabaseMemberSelfProfileRepository
         effectiveDate: _date(row['effective_date']) ?? DateTime(1),
         transferTypeCode: _text(row['transfer_type_code']) ?? 'TRANSFER',
       );
+
+  static MemberOriginDetails? _origin(dynamic value) {
+    if (value is! Map) return null;
+    final row = Map<String, dynamic>.from(value);
+    final origin = MemberOriginDetails(
+      nativePlace: _text(row['native_place']),
+      homeParish: _text(row['home_parish']),
+      diocese: _text(row['diocese']),
+      district: _text(row['district']),
+      state: _text(row['state']),
+      country: _text(row['country']),
+    );
+    return origin.isEmpty ? null : origin;
+  }
+
+  static List<LabeledValue> _homeContacts(List<Map<String, dynamic>> rows) =>
+      rows
+          .expand(
+            (row) => [
+              if (_text(
+                    row['address'] ??
+                        row['home_address'] ??
+                        row['formatted_address'],
+                  )
+                  case final value?)
+                LabeledValue('Home Address', value),
+              if (_text(row['phone']) case final value?)
+                LabeledValue('Home Phone', value),
+              if (_text(row['whatsapp']) case final value?)
+                LabeledValue('Home WhatsApp', value),
+              if (_text(row['email']) case final value?)
+                LabeledValue('Home Email', value),
+            ],
+          )
+          .toList(growable: false);
 
   static List<Map<String, dynamic>> _rows(dynamic value) => value is List
       ? value.whereType<Map>().map(Map<String, dynamic>.from).toList()

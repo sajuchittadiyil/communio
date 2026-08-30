@@ -154,6 +154,7 @@ class CommunityDetailScreen extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final desktop = constraints.maxWidth >= 900;
+
             if (!desktop) {
               return Column(
                 children: [
@@ -170,36 +171,44 @@ class CommunityDetailScreen extends StatelessWidget {
                     const SizedBox(height: AppSpacing.md),
                     ministries,
                   ],
+                  const SizedBox(height: AppSpacing.md),
+                  _CommunityHistory(community: community, onMember: onMember),
                 ],
               );
             }
+
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  flex: 6,
+                  flex: 5,
                   child: Column(
                     children: [
                       leadership,
                       if (community.currentMovements.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.lg),
+                        const SizedBox(height: AppSpacing.md),
                         away,
                       ],
-                      const SizedBox(height: AppSpacing.lg),
+                      const SizedBox(height: AppSpacing.md),
                       residents,
+                      if (community.ministryRecords.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        ministries,
+                      ],
                     ],
                   ),
                 ),
                 const SizedBox(width: AppSpacing.lg),
                 Expanded(
-                  flex: 4,
+                  flex: 5,
                   child: Column(
                     children: [
                       glance,
-                      if (community.ministryRecords.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.lg),
-                        ministries,
-                      ],
+                      const SizedBox(height: AppSpacing.md),
+                      _CommunityHistory(
+                        community: community,
+                        onMember: onMember,
+                      ),
                     ],
                   ),
                 ),
@@ -207,7 +216,6 @@ class CommunityDetailScreen extends StatelessWidget {
             );
           },
         ),
-        _CommunityHistory(community: community, onMember: onMember),
       ],
     );
   }
@@ -496,7 +504,9 @@ class _CommunityHistory extends StatelessWidget {
       community.communityValues.isNotEmpty;
 
   bool get _hasStory =>
-      _hasText(community.foundingStory) || _hasText(community.historySummary);
+      _hasText(community.description) ||
+      _hasText(community.foundingStory) ||
+      _hasText(community.historySummary);
 
   String? get _feastDay {
     final day = community.feastDay;
@@ -666,6 +676,16 @@ class _CommunityHistory extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (_hasText(community.description))
+                  _CommunityStoryBlock(
+                    title: 'Community Profile',
+                    text: community.description!,
+                    icon: Icons.info_outline_rounded,
+                  ),
+                if (_hasText(community.description) &&
+                    (_hasText(community.foundingStory) ||
+                        _hasText(community.historySummary)))
+                  const SizedBox(height: AppSpacing.lg),
                 if (_hasText(community.foundingStory))
                   _CommunityStoryBlock(
                     title: 'Founding Story',

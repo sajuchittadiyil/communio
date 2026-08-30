@@ -32,7 +32,6 @@ void main() {
         AppDestination.provinceProfile,
         AppDestination.myProfile,
         AppDestination.askCommunio,
-        AppDestination.settings,
       }),
     );
     expect(destinations, isNot(contains(AppDestination.governance)));
@@ -255,7 +254,11 @@ void main() {
     expect(other.sections.family, isEmpty);
     expect(
       other.sections.contacts.map((item) => item.label),
-      containsAll(['Mobile', 'Official Email', 'Postal Address']),
+      containsAll(['Mobile', 'Official Email']),
+    );
+    expect(
+      other.sections.contacts.map((item) => item.label),
+      isNot(contains('Postal Address')),
     );
     expect(other.sections.documents, isEmpty);
     expect(other.sections.leaveHistory, isEmpty);
@@ -366,6 +369,135 @@ void main() {
       );
     },
   );
+
+  test('Community Superior resident maps pastoral profile sections only', () {
+    final profile = SupabaseOtherMemberProfileRepository.mapProfile(
+      {
+        'member_id': 'resident',
+        'display_name': 'Resident Member',
+        'qualifications': [
+          {'qualification': 'B.Ed.'},
+        ],
+        'languages': [
+          {'language_name': 'Hindi', 'can_speak': true},
+        ],
+        'home_contacts': [
+          {
+            'name': 'Family Home',
+            'relationship': 'Home',
+            'phone': '+91 90000 00000',
+          },
+        ],
+        'family': [
+          {
+            'name': 'Parent Name',
+            'relationship': 'Father',
+            'life_status': 'living',
+          },
+        ],
+        'documents': [
+          {'type': 'Will'},
+        ],
+        'confidential_notes': 'Must never map',
+      },
+      memberId: 'resident',
+      includeFamily: true,
+    );
+
+    expect(profile.sections.qualifications, hasLength(1));
+    expect(profile.sections.languages, hasLength(1));
+    expect(profile.sections.family, hasLength(2));
+    expect(profile.sections.homeContacts, hasLength(1));
+    expect(profile.sections.documents, isEmpty);
+    expect(profile.sections.leaveHistory, isEmpty);
+  });
+
+  test('other member maps safe origin without private postal address', () {
+    final profile = SupabaseOtherMemberProfileRepository.mapProfile({
+      'member_id': 'other',
+      'display_name': 'Other Member',
+      'date_of_birth': '1984-07-12',
+      'birthplace': 'Pala',
+      'native_place': 'Kottayam',
+      'home_parish': 'St Mary Parish',
+      'diocese': 'Kottayam',
+      'district': 'Kottayam',
+      'state': 'Kerala',
+      'country': 'India',
+      'address': 'Private family street address',
+    }, memberId: 'other');
+
+    expect(profile.origin?.nativePlace, 'Kottayam');
+    expect(profile.origin?.birthplace, 'Pala');
+    expect(profile.origin?.homeParish, 'St Mary Parish');
+    expect(profile.origin?.diocese, 'Kottayam');
+    expect(
+      profile.sections.contacts.map((item) => item.value),
+      isNot(contains('Private family street address')),
+    );
+    expect(profile.dateOfBirth, DateTime(1984, 7, 12));
+  });
+
+  test('member-safe mapping preserves every returned vocation milestone', () {
+    final profile = SupabaseOtherMemberProfileRepository.mapProfile({
+      'member_id': 'other',
+      'display_name': 'Other Member',
+      'vocation_events': [
+        {'event_type_code': 'entry', 'event_date': '2001-06-01'},
+        {'event_type_code': 'postulancy', 'event_date': '2002-06-01'},
+        {'event_type_code': 'novitiate', 'event_date': '2003-06-01'},
+        {'event_type_code': 'first_profession', 'event_date': '2004-06-01'},
+        {'event_type_code': 'perpetual_profession', 'event_date': '2010-06-01'},
+      ],
+    }, memberId: 'other');
+
+    expect(profile.sections.vocationEvents, hasLength(5));
+    expect(
+      profile.sections.vocationEvents.map((event) => event.label),
+      containsAll([
+        'Entry',
+        'Postulancy',
+        'Novitiate',
+        'First Profession',
+        'Perpetual Profession',
+      ]),
+    );
+  });
+
+  test(
+    'member-safe community mapping retains populated identity narrative',
+    () {
+      final communities = SupabaseMemberSafeProvinceRepository.mapCommunities([
+        {
+          'community_id': 'community-1',
+          'name': 'Sacred Heart Community',
+          'active': true,
+          'description': 'A community serving the local Church.',
+          'motto': 'In communion and service',
+          'mission_statement': 'To live and serve together.',
+          'vision_statement': 'A compassionate local community.',
+          'apostolic_focus': ['Pastoral care'],
+          'community_values': ['Communion'],
+          'founding_story': 'Opened for mission.',
+          'history_summary': 'Continues its local service.',
+        },
+      ]);
+
+      expect(communities.single.description, isNotEmpty);
+      expect(communities.single.missionStatement, isNotEmpty);
+      expect(communities.single.visionStatement, isNotEmpty);
+      expect(communities.single.apostolicFocus, ['Pastoral care']);
+      expect(communities.single.communityValues, ['Communion']);
+    },
+  );
+
+  test('other member does not create an empty Origin card model', () {
+    final profile = SupabaseOtherMemberProfileRepository.mapProfile({
+      'member_id': 'other',
+      'display_name': 'Other Member',
+    }, memberId: 'other');
+    expect(profile.origin, isNull);
+  });
 }
 
 class _OtherSafeProfileRepository implements ReligiousProfileRepository {
@@ -379,8 +511,8 @@ class _OtherSafeProfileRepository implements ReligiousProfileRepository {
         'member_status_code': 'active',
         'mobile': '+91 90000 00020',
         'official_email': 'other@communio.com',
-        'address': 'Mission Road',
-        'city': 'Ranchi',
+        'address': 'Private Mission Road',
+        'native_place': 'Ranchi',
         'state': 'Jharkhand',
         'country': 'India',
         'community_name': 'Safe Community',

@@ -112,22 +112,10 @@ class RoleNavigationConfiguration {
         selectedIcon: Icons.folder_rounded,
       ),
       AppNavigationItem(
-        destination: AppDestination.reports,
-        label: 'Reports',
-        icon: Icons.insert_chart_outlined_rounded,
-        selectedIcon: Icons.insert_chart_rounded,
-      ),
-      AppNavigationItem(
         destination: AppDestination.directory,
         label: 'Directory',
         icon: Icons.contacts_outlined,
         selectedIcon: Icons.contacts_rounded,
-      ),
-      AppNavigationItem(
-        destination: AppDestination.settings,
-        label: 'Settings',
-        icon: Icons.settings_outlined,
-        selectedIcon: Icons.settings_rounded,
       ),
     ],
   );
@@ -195,12 +183,6 @@ class RoleNavigationConfiguration {
         label: 'Ask Communio',
         icon: Icons.auto_awesome_outlined,
         selectedIcon: Icons.auto_awesome_rounded,
-      ),
-      AppNavigationItem(
-        destination: AppDestination.settings,
-        label: 'Settings',
-        icon: Icons.settings_outlined,
-        selectedIcon: Icons.settings_rounded,
       ),
     ],
   );

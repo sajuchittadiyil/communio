@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/assets.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radius.dart';
 import '../../../core/theme/spacing.dart';
@@ -31,19 +32,42 @@ class ProvincialNavigationRail extends StatelessWidget {
       child: SafeArea(
         right: false,
         child: SizedBox(
-          width: AppSpacing.mega * 2,
+          width: 210,
           child: DecoratedBox(
             decoration: const BoxDecoration(
               border: Border(right: BorderSide(color: AppColors.divider)),
             ),
             child: Column(
               children: [
-                const Padding(
-                  padding: EdgeInsets.all(AppSpacing.lg),
-                  child: Icon(
-                    Icons.hub_rounded,
-                    color: AppColors.primary,
-                    size: AppSpacing.xxxl,
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.lg,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        AppAssets.logo,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Flexible(
+                        child: Text(
+                          'COMMUNIO',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.responsive(context)
+                              .sidebarWordmark
+                              .copyWith(
+                                color: AppColors.primary,
+                                letterSpacing: 1.2,
+                              ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const Divider(height: AppSpacing.xxs),
@@ -67,7 +91,6 @@ class ProvincialNavigationRail extends StatelessWidget {
                 ShellAccountMenu(
                   displayName: displayName,
                   compact: true,
-                  onNavigate: onSelected,
                   onSignOut: onSignOut,
                 ),
                 const SizedBox(height: AppSpacing.xs),

@@ -7,7 +7,9 @@ import '../../../core/theme/typography.dart';
 import 'auth_statistics.dart';
 
 class AuthBrandPanel extends StatelessWidget {
-  const AuthBrandPanel({super.key});
+  const AuthBrandPanel({this.compact = false, super.key});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -31,15 +33,17 @@ class AuthBrandPanel extends StatelessWidget {
             child: const _FaithGlyph(icon: Icons.volunteer_activism_outlined),
           ),
           Transform.translate(
-            offset: const Offset(0, -AppSpacing.xxxl),
+            offset: Offset(0, compact ? -AppSpacing.md : -AppSpacing.xxxl),
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.massive),
+                padding: EdgeInsets.all(
+                  compact ? AppSpacing.xxl : AppSpacing.massive,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Transform.scale(
-                      scale: 1.12,
+                      scale: compact ? 0.94 : 1.12,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -71,16 +75,16 @@ class AuthBrandPanel extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xxxl),
+                    SizedBox(height: compact ? AppSpacing.lg : AppSpacing.xxxl),
                     Image.asset(
                       AppAssets.divider,
                       width: AppSpacing.mega * 4,
                       height: AppSpacing.huge,
                       fit: BoxFit.cover,
                     ),
-                    const SizedBox(height: AppSpacing.xxl),
+                    SizedBox(height: compact ? AppSpacing.md : AppSpacing.xxl),
                     Transform.scale(
-                      scale: 1.1,
+                      scale: compact ? 0.94 : 1.1,
                       child: Text(
                         'One Platform.\nEvery Congregation.\nEndless Possibilities.',
                         textAlign: TextAlign.center,
@@ -89,9 +93,9 @@ class AuthBrandPanel extends StatelessWidget {
                         ).headlineLarge.copyWith(color: AppColors.primary),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xxl),
+                    SizedBox(height: compact ? AppSpacing.md : AppSpacing.xxl),
                     const AuthStatistics(),
-                    const SizedBox(height: AppSpacing.xxl),
+                    SizedBox(height: compact ? AppSpacing.md : AppSpacing.xxl),
                     Text(
                       'Connected in Faith.\nUnited in Mission.',
                       textAlign: TextAlign.center,

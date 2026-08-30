@@ -5,14 +5,12 @@ import '../../../core/theme/colors.dart';
 import '../../../core/theme/radius.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/theme/typography.dart';
-import '../models/app_navigation.dart';
 import 'shell_account_menu.dart';
 
 class ShellTopBar extends StatelessWidget implements PreferredSizeWidget {
   const ShellTopBar({
     required this.title,
     required this.displayName,
-    required this.onNavigate,
     required this.onSignOut,
     required this.onSearch,
     this.mobile = false,
@@ -22,7 +20,6 @@ class ShellTopBar extends StatelessWidget implements PreferredSizeWidget {
 
   final String title;
   final String displayName;
-  final ValueChanged<AppDestination> onNavigate;
   final VoidCallback onSignOut;
   final VoidCallback onSearch;
   final bool mobile;
@@ -68,15 +65,9 @@ class ShellTopBar extends StatelessWidget implements PreferredSizeWidget {
               onPressed: onSearch,
               icon: const Icon(Icons.search_rounded),
             ),
-            IconButton(
-              tooltip: 'Notifications',
-              onPressed: () => _showComingSoon(context, 'Notifications'),
-              icon: const Icon(Icons.notifications_none_rounded),
-            ),
             ShellAccountMenu(
               displayName: displayName,
               compact: true,
-              onNavigate: onNavigate,
               onSignOut: onSignOut,
             ),
           ],
@@ -164,28 +155,10 @@ class ShellTopBar extends StatelessWidget implements PreferredSizeWidget {
       onPressed: onSearch,
       icon: const Icon(Icons.search_rounded),
     ),
-    IconButton(
-      tooltip: 'Notifications',
-      onPressed: () => _showComingSoon(context, 'Notifications'),
-      icon: const Icon(Icons.notifications_none_rounded),
-    ),
-    if (!compact)
-      IconButton(
-        tooltip: 'Help',
-        onPressed: () => _showComingSoon(context, 'Help'),
-        icon: const Icon(Icons.help_outline_rounded),
-      ),
     ShellAccountMenu(
       displayName: displayName,
       compact: compact,
-      onNavigate: onNavigate,
       onSignOut: onSignOut,
     ),
   ];
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('$feature will be available soon.')));
-  }
 }

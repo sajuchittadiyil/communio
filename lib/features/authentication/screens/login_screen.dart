@@ -14,7 +14,7 @@ class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   static const double _tabletBreakpoint = 768;
-  static const double _desktopBreakpoint = 1440;
+  static const double _desktopBreakpoint = 1200;
 
   @override
   Widget build(BuildContext context) {
@@ -28,10 +28,10 @@ class LoginScreen extends StatelessWidget {
           const BackgroundLayer(),
           SafeArea(
             child: isDesktop
-                ? const _DesktopLoginLayout()
+                ? const _DesktopLoginLayout(key: ValueKey('desktop-login'))
                 : isMobile
-                ? const _MobileLoginLayout()
-                : const _ScrollableLoginLayout(),
+                ? const _MobileLoginLayout(key: ValueKey('mobile-login'))
+                : const _ScrollableLoginLayout(key: ValueKey('tablet-login')),
           ),
         ],
       ),
@@ -40,63 +40,70 @@ class LoginScreen extends StatelessWidget {
 }
 
 class _DesktopLoginLayout extends StatelessWidget {
-  const _DesktopLoginLayout();
+  const _DesktopLoginLayout({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(flex: 6, child: AuthBrandPanel()),
-        Expanded(
-          flex: 4,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.surface, AppColors.background],
-              ),
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                const padding = EdgeInsets.fromLTRB(
-                  AppSpacing.xxxl,
-                  AppSpacing.xxxl,
-                  AppSpacing.xxxl,
-                  AppSpacing.lg,
-                );
-                return SingleChildScrollView(
-                  padding: padding,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight:
-                          constraints.maxHeight - padding.top - padding.bottom,
-                    ),
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
+    return LayoutBuilder(
+      builder: (context, viewport) {
+        final compact = viewport.maxHeight < 820;
+        return Row(
+          children: [
+            Expanded(flex: 6, child: AuthBrandPanel(compact: compact)),
+            Expanded(
+              flex: 4,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.surface, AppColors.background],
+                  ),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final padding = EdgeInsets.fromLTRB(
+                      compact ? AppSpacing.xxl : AppSpacing.xxxl,
+                      compact ? AppSpacing.lg : AppSpacing.xxxl,
+                      compact ? AppSpacing.xxl : AppSpacing.xxxl,
+                      compact ? AppSpacing.sm : AppSpacing.lg,
+                    );
+                    return SingleChildScrollView(
+                      padding: padding,
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          maxWidth: AppSpacing.max * 5 + AppSpacing.huge,
+                          minHeight:
+                              constraints.maxHeight -
+                              padding.top -
+                              padding.bottom,
                         ),
-                        child: Transform.translate(
-                          offset: const Offset(0, -AppSpacing.xl),
-                          child: const _SignInColumn(),
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: AppSpacing.max * 5 + AppSpacing.huge,
+                            ),
+                            child: Transform.translate(
+                              offset: const Offset(0, -AppSpacing.xl),
+                              child: _SignInColumn(compactDesktop: compact),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                );
-              },
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
 
 class _ScrollableLoginLayout extends StatelessWidget {
-  const _ScrollableLoginLayout();
+  const _ScrollableLoginLayout({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +129,7 @@ class _ScrollableLoginLayout extends StatelessWidget {
 }
 
 class _MobileLoginLayout extends StatelessWidget {
-  const _MobileLoginLayout();
+  const _MobileLoginLayout({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -170,10 +177,12 @@ class _SignInColumn extends StatelessWidget {
   const _SignInColumn({
     this.useMobileSpacing = false,
     this.compactMobile = false,
+    this.compactDesktop = false,
   });
 
   final bool useMobileSpacing;
   final bool compactMobile;
+  final bool compactDesktop;
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +191,10 @@ class _SignInColumn extends StatelessWidget {
       children: [
         SizedBox(
           width: double.infinity,
-          child: LoginCard(compactMobile: compactMobile),
+          child: LoginCard(
+            compactMobile: compactMobile,
+            compactDesktop: compactDesktop,
+          ),
         ),
         SizedBox(
           height: useMobileSpacing
@@ -198,7 +210,11 @@ class _SignInColumn extends StatelessWidget {
             compact: compactMobile,
           ),
         ),
-        SizedBox(height: compactMobile ? AppSpacing.md : AppSpacing.xl),
+        SizedBox(
+          height: compactMobile || compactDesktop
+              ? AppSpacing.md
+              : AppSpacing.xl,
+        ),
         Text(
           '© 2026 Communio. All rights reserved.',
           textAlign: TextAlign.center,

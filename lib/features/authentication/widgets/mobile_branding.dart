@@ -38,13 +38,17 @@ class MobileBranding extends StatelessWidget {
                     1.15,
               ),
               SizedBox(height: compact ? AppSpacing.xs : AppSpacing.sm),
-              Text(
-                'COMMUNIO',
-                textAlign: TextAlign.center,
-                style: AppTypography.responsive(context).displayMedium.copyWith(
-                  color: AppColors.primary,
-                  fontSize: compact ? 44 : 48,
-                  letterSpacing: AppSpacing.xs,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'COMMUNIO',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.responsive(context).displayMedium
+                      .copyWith(
+                        color: AppColors.primary,
+                        fontSize: compact ? 44 : 48,
+                        letterSpacing: AppSpacing.xs,
+                      ),
                 ),
               ),
               SizedBox(height: compact ? AppSpacing.xs : AppSpacing.sm),
@@ -135,16 +139,18 @@ class _MobileFeatureEmblem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 1),
           child: SizedBox(
             width: double.infinity,
-            child: Text(
-              item.label,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.visible,
-              style: AppTypography.responsive(context).labelSmall.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-                fontSize: compact ? 8.8 : 9.4,
-                letterSpacing: 0.0,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                item.label,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+                style: AppTypography.responsive(context).labelSmall.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: compact ? 8.8 : 9.4,
+                  letterSpacing: 0.0,
+                ),
               ),
             ),
           ),

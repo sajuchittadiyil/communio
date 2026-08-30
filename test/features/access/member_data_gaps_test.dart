@@ -39,6 +39,46 @@ void main() {
     expect(profile.sections.contacts.single.label, 'Official Email');
   });
 
+  test('self profile maps caller-bound origin and home facts', () {
+    final profile = SupabaseMemberSelfProfileRepository.mapProfile({
+      'member_id': 'roy-uuid',
+      'display_name': 'Roy Noronha',
+      'member_status_code': 'active',
+      'native_details': {
+        'native_place': 'Mangaluru',
+        'home_parish': 'St. Antony Parish',
+        'diocese': 'Mangalore',
+        'district': 'Dakshina Kannada',
+        'state': 'Karnataka',
+        'country': 'India',
+      },
+      'home_contacts': [
+        {
+          'name': 'Family Home',
+          'relationship': 'Home',
+          'address': '19 Church Road, Mangaluru',
+          'phone': '+91 90000 00019',
+        },
+      ],
+      'family': [
+        {
+          'name': 'Parent Name',
+          'relationship': 'Father',
+          'life_status': 'living',
+        },
+      ],
+    }, expectedMemberId: 'roy-uuid');
+
+    expect(profile.origin?.nativePlace, 'Mangaluru');
+    expect(profile.origin?.homeParish, 'St. Antony Parish');
+    expect(profile.origin?.diocese, 'Mangalore');
+    expect(profile.origin?.state, 'Karnataka');
+    expect(profile.sections.homeContacts, hasLength(2));
+    expect(profile.sections.homeContacts.first.label, 'Home Address');
+    expect(profile.sections.homeContacts.last.label, 'Home Phone');
+    expect(profile.sections.family, hasLength(2));
+  });
+
   test('self profile maps structured languages and nullable capabilities', () {
     final profile = SupabaseMemberSelfProfileRepository.mapProfile({
       'member_id': 'roy-uuid',
